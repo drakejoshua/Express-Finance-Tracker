@@ -7,36 +7,7 @@ import { logger } from './Shared/middleware/logger.js'
 
 const server = express()
 
-let isDBConnected = false
 const PORT = process.env.PORT || 8000
-
-// Middleware to check database connection before handling requests
-// server.use(async (req, res, next) => {
-//     try {
-//         // If already connected, move on
-//         if (isDBConnected) {
-//             return next()
-//         }
-
-//         // Attempt connection
-//         await mongoose.connect("mongodb://localhost:27017/finance-app", {
-//             serverSelectionTimeoutMS: 5000 // prevents hanging forever
-//         })
-
-//         isDBConnected = true
-//         console.log("Connected to MongoDB")
-
-//         next()
-//     } catch (err) {
-//         console.error("Failed to connect to MongoDB", err.message)
-
-//         // send response
-//         res.status(500).send("Failed to connect to database")
-
-//         // optional: kill process (not recommended here)
-//         process.exit(1)
-//     }
-// })
 
 // connect to database before starting server
 await connectDB()
@@ -59,6 +30,7 @@ server.use( NotFound )
 // global error handler to catch all errors and return 500
 server.use( error )
 
+
 server.listen( PORT, () => {
-    console.log("Server is running")
+    console.log(`Server is running on port ${ PORT }` )
 })
