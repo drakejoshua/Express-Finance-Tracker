@@ -12,7 +12,12 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.9.0",
     "express": "^5.2.1",
-    "mongoose": "^9.3.1"
+    "express-validator": "^7.3.1",
+    "mailersend": "^2.6.0",
+    "mongoose": "^9.3.1",
+    "multer": "^2.1.1"
   }
 }
