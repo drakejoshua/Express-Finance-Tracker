@@ -18,6 +18,11 @@ server.use( logger )
 // Middleware to check database connection on each request
 server.use(checkDBConnection)
 
+// add middleware to parse JSON request bodies
+server.use(express.json())
+
+// add middleware to parse URL-encoded request bodies
+server.use(express.urlencoded({ extended: true }))
 
 server.get("/", (req, res) => {
     res.send("Hello World")

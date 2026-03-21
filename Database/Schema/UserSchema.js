@@ -50,4 +50,16 @@ const AssetSchema = mongoose.Schema({
 })
 
 
+UserSchema.methods.getProfileData = function() {
+    return {
+        id: this._id,
+        name: this.name,
+        email: this.email,
+        profile_photo: this.profile_photo,
+        preferred_currency: this.currency,
+        portfolio: this.portfolio,
+        watchlist: this.watchlist
+    }
+}
+
 export default mongoose.model( "Users", UserSchema )
