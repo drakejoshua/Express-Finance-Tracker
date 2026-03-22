@@ -7,6 +7,9 @@ export const ERROR_CODES = {
     INVALID_USERNAME: "INVALID_USERNAME",
     EMAIL_EXISTS: "EMAIL_EXISTS",
     FILE_UPLOAD_ERROR: "FILE_UPLOAD_ERROR",
+    EMAIL_NOT_FOUND: "EMAIL_NOT_FOUND",
+    INVALID_AUTHENTICATION_METHOD: "INVALID_AUTHENTICATION_METHOD",
+    INVALID_PASSWORD: "INVALID_PASSWORD",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -90,4 +93,36 @@ FileUploadError.code = ERROR_CODES.FILE_UPLOAD_ERROR
 
 export function reportFileUploadError( next ) {
     return next( FileUploadError )
+}
+
+
+// email not found error for when a user tries to log in with 
+// an email that doesn't exist in the database
+export const EmailNotFoundError = new Error("The provided email address is not registered with an account. Please check your email and try again.")
+EmailNotFoundError.status = 404
+EmailNotFoundError.code = ERROR_CODES.EMAIL_NOT_FOUND
+
+export function reportEmailNotFoundError( next ) {
+    return next( EmailNotFoundError )
+}
+
+
+// invalid authentication method error for when a user tries to log in with
+// an email that is registered with a different authentication method (e.g. Google)
+export const InvalidAuthenticationMethodError = new Error("The account associated with the provided email address does not use email-password authentication. Please sign in using the google account option.")
+InvalidAuthenticationMethodError.status = 400
+InvalidAuthenticationMethodError.code = ERROR_CODES.INVALID_AUTHENTICATION_METHOD
+
+export function reportInvalidAuthenticationMethodError( next ) {
+    return next( InvalidAuthenticationMethodError )
+}
+
+
+// invalid password error for when a user tries to log in with an incorrect password
+export const InvalidPasswordError = new Error("The password you entered is incorrect. Please check your password and try again.")
+InvalidPasswordError.status = 400
+InvalidPasswordError.code = ERROR_CODES.INVALID_PASSWORD
+
+export function reportInvalidPasswordError( next ) {
+    return next( InvalidPasswordError )
 }

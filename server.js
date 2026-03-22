@@ -5,6 +5,8 @@ import { NotFound } from './Shared/middleware/NotFound.js'
 import { error } from './Shared/middleware/error.js'
 import { logger } from './Shared/middleware/logger.js'
 import authRoutes from './Auth/routes.js'
+import passport from 'passport'
+import { configurePassport } from './Auth/middleware/passport.js'
 
 const server = express()
 
@@ -12,6 +14,12 @@ const PORT = process.env.PORT || 8000
 
 // connect to database before starting server
 await connectDB()
+
+// initialize passport for authentication
+server.use( passport.initialize() )
+
+// configure passport strategies
+configurePassport( passport )
 
 // Logger middleware to log all incoming requests
 server.use( logger )

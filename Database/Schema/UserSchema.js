@@ -43,6 +43,11 @@ const UserSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
+    provider: {
+        type: String,
+        enum: [ "local", "google" ],
+        default: "local"
+    },
     email_verification_token: String,
     email_verification_expires: Date,
     password_reset_token: String,
