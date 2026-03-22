@@ -1,12 +1,13 @@
 import express from "express"
-import { body, validationResult } from "express-validator"
+import { body, header, validationResult } from "express-validator"
 import upload from "./middleware/multer.js"
-import { ERROR_CODES, reportEmailExistsError, reportEmailNotFoundError, reportFileUploadError, reportInvalidEmailError, reportInvalidUsernameError } from "../Shared/utils/errors.js"
+import { ERROR_CODES, reportEmailExistsError, reportEmailNotFoundError, reportFileUploadError, reportInvalidAuthorizationTokenError, reportInvalidEmailError, reportInvalidUsernameError } from "../Shared/utils/errors.js"
 import { cloudinaryUpload } from "./utils/cloudinary.js"
 import Users from "../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
 import { generateAccessToken, generateRefreshToken } from "./utils/tokens.js"
 import passport from "passport"
+import { validateBearerJWT } from "./utils/validators.js"
 
 // create a router for auth routes
 const router = express.Router()
@@ -194,6 +195,52 @@ router.post("/login",
                     access_token: accessToken,
                     expires_in: 15 * 60     // access token expires in 15 mins
                 }
+            }
+        })
+    }
+)
+
+
+// POST /auth/logout - handle user logout by clearing the refresh token cookie
+// and removing the refresh token from the database
+router.post("/logout",
+    [
+        header("Authorization")
+            .exists()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+    ],
+    async function( req, res, next ) {
+        // extract validation errors from the request
+        const errors = validationResult( req )
+
+        // check if there are validation errors and report
+        // the first one if any
+        if ( !errors.isEmpty() ) {
+            switch( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+            }
+        }
+
+        // if validation passed, proceed with passport JWT authentication
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function( req, res, next ) {
+        res.clearCookie( "refresh_token", refreshTokenCookieOptions )
+
+        // remove the refresh token from the user's document in the database
+        req.user.refresh_token = null
+        await req.user.save()
+
+        return res.status( 200 ).json({
+            status: "success",
+            data: {
+                message: "You have been logged out successfully."
             }
         })
     }

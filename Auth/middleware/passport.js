@@ -3,7 +3,12 @@ import { Strategy as LocalStrategy } from "passport-local"
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt"
 import Users from "../../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
-import { EmailNotFoundError, InvalidAuthenticationMethodError, InvalidPasswordError } from "../../Shared/utils/errors.js"
+import { 
+    EmailNotFoundError, 
+    InvalidAuthenticationMethodError, 
+    InvalidAuthorizationTokenError, 
+    InvalidPasswordError 
+} from "../../Shared/utils/errors.js"
 
 export function configurePassport( passport ) {
     // configure local strategy for passport authentication
@@ -51,7 +56,7 @@ export function configurePassport( passport ) {
         // JWT from the request and the secret key to verify the token
         {
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            secretOrKey: process.env.JWT_SECRET
+            secretOrKey: process.env.JWT_SECRET_KEY
         },
         // verify callback to authenticate user using the information 
         // in the JWT payload
@@ -68,6 +73,7 @@ export function configurePassport( passport ) {
                 // if user is found, return the user object
                 return done( null, user )
             } catch ( error ) {
+                console.log( "Error in JWT strategy:", error )
                 return done( error, false )
             }
         }
