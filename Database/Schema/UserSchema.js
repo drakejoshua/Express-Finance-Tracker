@@ -1,5 +1,11 @@
 import mongoose from "mongoose";
-import { supportedCurrencies } from "../utils/supportedCurrencies.js";
+import { supportedCurrencies } from "../../Shared/utils/supportedCurrencies.js";
+
+// Asset schema to represent individual assets in the user's portfolio
+const AssetSchema = mongoose.Schema({
+    symbol: String,
+    units: Number
+})
 
 // User schema to represent user data in the database with validation rules and default values
 const UserSchema = mongoose.Schema({
@@ -40,19 +46,14 @@ const UserSchema = mongoose.Schema({
     email_verification_token: String,
     email_verification_expires: Date,
     password_reset_token: String,
-    password_reset_expires: Date
+    password_reset_expires: Date,
+    refresh_token: String
 })
 
-// Asset schema to represent individual assets in the user's portfolio
-const AssetSchema = mongoose.Schema({
-    symbol: String,
-    units: Number
-})
-
-
+// document-based method to return the user's profile data as an object, 
+// excluding sensitive information like password and refresh token
 UserSchema.methods.getProfileData = function() {
     return {
-        id: this._id,
         name: this.name,
         email: this.email,
         profile_photo: this.profile_photo,
@@ -60,6 +61,24 @@ UserSchema.methods.getProfileData = function() {
         portfolio: this.portfolio,
         watchlist: this.watchlist
     }
+}
+
+// static method to create a new user in the database with the provided 
+// sign-up data such as: name, email, password, optional profile photo URL and public ID
+UserSchema.statics.signUp = async function( signUpData ) {
+    const user = new this({
+        name: signUpData.name,
+        email: signUpData.email,
+        password: signUpData.password,
+        profile_photo: signUpData?.profile_photo,
+        profile_photo_public_id: signUpData?.profile_photo_public_id,
+        email_verification_expires: signUpData?.email_verification_expires,
+        email_verification_token: signUpData?.email_verification_token
+    })
+
+    await user.save()
+
+    return user
 }
 
 export default mongoose.model( "Users", UserSchema )

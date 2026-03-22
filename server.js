@@ -4,6 +4,7 @@ import { checkDBConnection } from './Database/middleware/checkDBConnection.js'
 import { NotFound } from './Shared/middleware/NotFound.js'
 import { error } from './Shared/middleware/error.js'
 import { logger } from './Shared/middleware/logger.js'
+import authRoutes from './Auth/routes.js'
 
 const server = express()
 
@@ -24,9 +25,9 @@ server.use(express.json())
 // add middleware to parse URL-encoded request bodies
 server.use(express.urlencoded({ extended: true }))
 
-server.get("/", (req, res) => {
-    res.send("Hello World")
-})
+
+// add auth routes with /auth prefix
+server.use("/auth", authRoutes )
 
 
 // not found middleware to catch all unmatched routes and return 404

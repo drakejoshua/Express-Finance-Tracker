@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 export const connectDB = async () => {
     try {
         // try to connect to MongoDB, throw an error if it fails
-        await mongoose.connect("mongodb://localhost:27017/finance-app", {
+        await mongoose.connect("mongodb://localhost:27017/GreenFinance", {
             serverSelectionTimeoutMS: 5000     // timeout after 5 seconds instead of hanging forever
         })
 
