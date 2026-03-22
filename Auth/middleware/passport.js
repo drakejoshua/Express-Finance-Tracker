@@ -1,11 +1,12 @@
 import passport from "passport"
 import { Strategy as LocalStrategy } from "passport-local"
+import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt"
 import Users from "../../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
 import { EmailNotFoundError, InvalidAuthenticationMethodError, InvalidPasswordError } from "../../Shared/utils/errors.js"
 
 export function configurePassport( passport ) {
-    // configure the local strategy for passport authentication
+    // configure local strategy for passport authentication
     passport.use( new LocalStrategy(
         // set the fields to be used for username for authentication
         // from the request body
@@ -40,6 +41,34 @@ export function configurePassport( passport ) {
                 return done( null, user );
             } catch( error ) {
                 return done( error, false );
+            }
+        }
+    ))
+
+    // configure JWT strategy for passport authentication
+    passport.use( new JwtStrategy(
+        // set the options for JWT strategy, including how to extract the
+        // JWT from the request and the secret key to verify the token
+        {
+            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+            secretOrKey: process.env.JWT_SECRET
+        },
+        // verify callback to authenticate user using the information 
+        // in the JWT payload
+        async function( jwt_payload, done ) {
+            try {
+                // find user by ID from the JWT payload
+                const user = await Users.findById( jwt_payload.userId )
+
+                // if user not found, report email not found error
+                if ( !user ) {
+                    return done( InvalidAuthorizationTokenError, false )
+                }
+
+                // if user is found, return the user object
+                return done( null, user )
+            } catch ( error ) {
+                return done( error, false )
             }
         }
     ))

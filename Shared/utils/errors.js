@@ -10,6 +10,7 @@ export const ERROR_CODES = {
     EMAIL_NOT_FOUND: "EMAIL_NOT_FOUND",
     INVALID_AUTHENTICATION_METHOD: "INVALID_AUTHENTICATION_METHOD",
     INVALID_PASSWORD: "INVALID_PASSWORD",
+    INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -125,4 +126,14 @@ InvalidPasswordError.code = ERROR_CODES.INVALID_PASSWORD
 
 export function reportInvalidPasswordError( next ) {
     return next( InvalidPasswordError )
+}
+
+
+// invalid authorization token error for when a user provides an invalid JWT in the Authorization header
+export const InvalidAuthorizationTokenError = new Error("The provided authorization token is invalid or has expired. Please log in again to obtain a new token.")
+InvalidAuthorizationTokenError.status = 401
+InvalidAuthorizationTokenError.code = ERROR_CODES.INVALID_AUTHORIZATION_TOKEN
+
+export function reportInvalidAuthorizationTokenError( next ) {
+    return next( InvalidAuthorizationTokenError )
 }
