@@ -7,6 +7,7 @@ import { logger } from './Shared/middleware/logger.js'
 import authRoutes from './Auth/routes.js'
 import passport from 'passport'
 import { configurePassport } from './Auth/middleware/passport.js'
+import cors from 'cors'
 
 const server = express()
 
@@ -20,6 +21,13 @@ server.use( passport.initialize() )
 
 // configure passport strategies
 configurePassport( passport )
+
+// initialize cors middleware for handling cross-origin 
+// requests from the frontend
+server.use( cors({
+    credentials: true,
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173'
+}) )
 
 // Logger middleware to log all incoming requests
 server.use( logger )

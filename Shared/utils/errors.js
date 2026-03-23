@@ -11,6 +11,7 @@ export const ERROR_CODES = {
     INVALID_AUTHENTICATION_METHOD: "INVALID_AUTHENTICATION_METHOD",
     INVALID_PASSWORD: "INVALID_PASSWORD",
     INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
+    INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -136,4 +137,14 @@ InvalidAuthorizationTokenError.code = ERROR_CODES.INVALID_AUTHORIZATION_TOKEN
 
 export function reportInvalidAuthorizationTokenError( next ) {
     return next( InvalidAuthorizationTokenError )
+}
+
+
+// invalid refresh token error for when a user provides an invalid refresh token in the request body to obtain a new access token
+export const InvalidRefreshTokenError = new Error("The provided refresh token is invalid or has expired. Please log in again to obtain new tokens.")
+InvalidRefreshTokenError.status = 401
+InvalidRefreshTokenError.code = ERROR_CODES.INVALID_REFRESH_TOKEN
+
+export function reportInvalidRefreshTokenError( next ) {
+    return next( InvalidRefreshTokenError )
 }

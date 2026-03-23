@@ -1,13 +1,14 @@
 import express from "express"
-import { body, header, validationResult } from "express-validator"
+import { body, header, cookie, validationResult } from "express-validator"
 import upload from "./middleware/multer.js"
-import { ERROR_CODES, reportEmailExistsError, reportEmailNotFoundError, reportFileUploadError, reportInvalidAuthorizationTokenError, reportInvalidEmailError, reportInvalidUsernameError } from "../Shared/utils/errors.js"
+import { ERROR_CODES, reportEmailExistsError, reportEmailNotFoundError, reportFileUploadError, reportInvalidAuthorizationTokenError, reportInvalidEmailError, reportInvalidRefreshTokenError, reportInvalidUsernameError } from "../Shared/utils/errors.js"
 import { cloudinaryUpload } from "./utils/cloudinary.js"
 import Users from "../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
-import { generateAccessToken, generateRefreshToken } from "./utils/tokens.js"
+import { generateAccessToken, generateRefreshToken, verifyJWT } from "./utils/tokens.js"
 import passport from "passport"
 import { validateBearerJWT } from "./utils/validators.js"
+import cookieParser from "cookie-parser"
 
 // create a router for auth routes
 const router = express.Router()
@@ -18,11 +19,16 @@ const bcryptRounds = 10
 // refresh token cookie options
 const refreshTokenCookieOptions = {
     httpOnly: true,
-    path: "/auth",
+    path: "/",
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 }
+
+
+// intialize cookie parser middleware to parse cookies from incoming requests
+router.use( cookieParser() )
+
 
 // POST /auth/signup - handle user signup, requires name, email,
 // password, and optional profile photo as multipart/form-data
@@ -245,5 +251,126 @@ router.post("/logout",
         })
     }
 )
+
+
+// GET /auth/me - get the authenticated user's profile data, requires a valid JWT 
+// in the Authorization header
+router.get("/me",
+    [
+        header("Authorization")
+            .exists()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+    ],
+    async function( req, res, next ) {
+        // extract validation errors from the request
+        const errors = validationResult( req )
+
+        // check if there are validation errors and report
+        // the first one if any
+        if ( !errors.isEmpty() ) {
+            switch( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+            }
+        }
+
+        // if validation passed, proceed with passport JWT authentication
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function( req, res, next ) {
+        // if authentication is successful, generate a new access token for the user and send the user's profile data and access token in the response
+        const accessToken = generateAccessToken( req.user._id )
+
+        return res.status( 200 ).json({
+            status: "success",
+            data: {
+                user: {
+                    ...req.user.getProfileData(),
+                    access_token: accessToken,
+                    expires_in: 15 * 60     // access token expires in 15 mins
+                }
+            }
+        })
+    }
+)
+
+
+// POST /auth/refresh - refresh the user's access token using the refresh token stored 
+// in the HTTP-only cookie
+router.post("/refresh",
+    [
+        cookie("refresh_token")
+            .exists()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_REFRESH_TOKEN )
+            .bail()
+            .isJWT()
+            .withMessage( ERROR_CODES.INVALID_REFRESH_TOKEN )
+            .bail()
+    ],
+    async function( req, res, next ) {
+        // extract validation errors from the request
+        const errors = validationResult( req )
+
+        // check if there are validation errors and report
+        // the first one if any
+        if ( !errors.isEmpty() ) {
+            switch( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_REFRESH_TOKEN:
+                    return reportInvalidRefreshTokenError( next )
+            }
+        }
+
+        console.log( "Received request cookies:", req.cookies.refresh_token )
+
+        // check if refresh token is not expired and is valid
+        const refreshToken = req.cookies.refresh_token
+        const decoded = verifyJWT( refreshToken )
+
+        // if the refresh token is invalid or expired, report 
+        // invalid refresh token error
+        if ( !decoded ) {
+            return reportInvalidRefreshTokenError( next )
+        }
+
+        // if the refresh token is valid, find the user in the database
+        const user = await Users.findOne( { _id: decoded.userId, refresh_token: refreshToken } )
+
+        // if user not found or refresh token does not match, report invalid refresh token error
+        if ( !user ) {
+            return reportInvalidRefreshTokenError( next )
+        }
+
+        // if the refresh token is valid and matches the one in the database, 
+        // generate a new access and refresh token for the user and send them
+        //  in the response
+        const accessToken = generateAccessToken( user._id )
+        const newRefreshToken = generateRefreshToken( user._id )
+
+        // save the new refresh token to the user's document in the database
+        user.refresh_token = newRefreshToken
+        await user.save()
+
+        // set the new refresh token as an HTTP-only cookie in the response
+        res.cookie( "refresh_token", newRefreshToken, refreshTokenCookieOptions )
+
+        return res.status( 200 ).json({
+            status: "success",
+            data: {
+                user: {
+                    ...user.getProfileData(),
+                    access_token: accessToken,
+                    expires_in: 15 * 60     // access token expires in 15 mins
+                }
+            }
+        })
+    }   
+)
+
 
 export default router
