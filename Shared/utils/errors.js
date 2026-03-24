@@ -13,6 +13,7 @@ export const ERROR_CODES = {
     INVALID_PASSWORD: "INVALID_PASSWORD",
     INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
     INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
+    PROFILE_UPDATE_FAILURE: "PROFILE_UPDATE_FAILURE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -159,4 +160,16 @@ InvalidRefreshTokenError.code = ERROR_CODES.INVALID_REFRESH_TOKEN
 
 export function reportInvalidRefreshTokenError( next ) {
     return next( InvalidRefreshTokenError )
+}
+
+
+// profile update failure error for when a user tries to update their 
+// profile but their profile provider doesn't allow the requested update 
+// (e.g. a user with a Google provider tries to update their email or password)
+export const ProfileUpdateFailureError = new Error("There was an error updating your profile. Users with Google authentication cannot update their email or password.")
+ProfileUpdateFailureError.status = 400
+ProfileUpdateFailureError.code = ERROR_CODES.PROFILE_UPDATE_FAILURE
+
+export function reportProfileUpdateFailureError( next ) {
+    return next( ProfileUpdateFailureError )
 }

@@ -1,7 +1,7 @@
 import express from "express"
 import { body, header, cookie, validationResult } from "express-validator"
 import upload from "./middleware/multer.js"
-import { ERROR_CODES, reportEmailExistsError, reportEmailNotFoundError, reportFileUploadError, reportInvalidAuthorizationTokenError, reportInvalidEmailError, reportInvalidRefreshTokenError, reportInvalidUsernameError } from "../Shared/utils/errors.js"
+import { ERROR_CODES, reportEmailExistsError, reportFileUploadError, reportInvalidAuthorizationTokenError, reportInvalidEmailError, reportInvalidRefreshTokenError, reportInvalidUsernameError, reportProfileUpdateFailureError } from "../Shared/utils/errors.js"
 import { cloudinaryUpload } from "./utils/cloudinary.js"
 import Users from "../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
@@ -373,13 +373,20 @@ router.post("/refresh",
 )
 
 
-// GET /auth/google - handle Google OAuth login/signup, requires a valid Google ID token in the request body
+// GET /auth/google - handle Google OAuth login/signup, 
+// requires a valid Google ID token in the request body
 router.get("/google",
     // use passport Google strategy to authenticate the user 
     // by redirecting them to the Google OAuth consent screen
     passport.authenticate("google", { scope: [ "profile", "email" ] })
 )
 
+
+// GET /auth/google/callback - handle the callback from Google OAuth 
+// after the user has authenticated, generate access and refresh tokens 
+// for the user, save the refresh token to the database, set the refresh 
+// token as an HTTP-only cookie, and send the user's profile data and access 
+// token in the response
 router.get("/google/callback",
     passport.authenticate( "google", { session: false }),
     async function( req, res, next ) {
@@ -409,5 +416,126 @@ router.get("/google/callback",
         })
     }
 )
+
+
+// POST /auth/update -  handle user profile updates, requires a valid JWT in 
+// the Authorization header and optional name and profile photo as 
+// multipart/form-data in the request body
+router.post("/update",
+    upload.single("photo"),
+    [
+        header("Authorization")
+            .exists()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail(),
+        body("name")
+            .optional()
+            .isLength({ min: 3 })
+            .withMessage( ERROR_CODES.INVALID_USERNAME )
+            .bail(),
+        body("email")
+            .optional()
+            .isEmail()
+            .withMessage( ERROR_CODES.INVALID_EMAIL )
+            .normalizeEmail()
+            .bail(),
+        body("password")
+            .optional()
+            .isLength({ min: 6 })
+            .withMessage( ERROR_CODES.INVALID_PASSWORD_FORMAT )
+            .bail()
+    ],
+    async function( req, res, next ) {
+        // extract validation errors from the request
+        const errors = validationResult( req )
+
+        // check if there are validation errors and report
+        // the first one if any
+        if ( !errors.isEmpty() ) {
+            switch( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+                case ERROR_CODES.INVALID_USERNAME:
+                    return reportInvalidUsernameError( next )
+                case ERROR_CODES.INVALID_EMAIL:
+                    return reportInvalidEmailError( next )
+                case ERROR_CODES.INVALID_PASSWORD_FORMAT:
+                    return reportInvalidPasswordFormatError( next )
+            }
+        }
+
+        // if validation passed, proceed with passport JWT authentication
+        return next()
+    },
+
+    // if validation passed, proceed with passport JWT authentication
+    passport.authenticate("jwt", { session: false }),
+
+    async function( req, res, next ) {
+        // if a file was uploaded, upload the file to cloudinary and update the user's profile photo URL and public ID in the database
+        if ( req.file ) {
+            try {
+                const uploadResult = await cloudinaryUpload( req.file.buffer )
+                req.user.profile_photo = uploadResult.secure_url
+                req.user.profile_photo_public_id = uploadResult.public_id
+            } catch ( error ) {
+                return reportFileUploadError( next )
+            }
+        }
+
+        // perform google vs local validation checks - e.g. if the user 
+        // authenticated with Google, they should not be able to update their 
+        // email or password since those fields are managed by Google and 
+        // not stored in the database
+        if ( req.user.provider === "google" && 
+            ( req.body.email || req.body.password ) ) 
+        {
+            return reportProfileUpdateFailureError( next )
+        }
+
+        // if a name was provided in the request body, 
+        // update the user's name in the database
+        if ( req.body.name ) {
+            req.user.name = req.body.name
+        }
+
+        // if an email was provided in the request body, update 
+        // the user's email in the database
+        if ( req.body.email && req.user.provider !== "google" ) {
+            req.user.email = req.body.email
+        }
+
+        // if a password was provided in the request body, hash the 
+        // new password and update it in the database
+        if ( req.body.password && req.user.provider !== "google" ) {
+            req.user.password = await bcrypt.hash( req.body.password, bcryptRounds )
+        }
+
+        // create a new access token for the user after updating their profile
+        const accessToken = generateAccessToken( req.user._id )
+
+        // save the updated user document in the database
+        await req.user.save()
+
+        // send success response to the client with the updated user's 
+        // profile data
+        return res.status( 200 ).json({
+            status: "success",
+            data: {
+                user: {
+                    ...req.user.getProfileData(),
+                    access_token: accessToken,
+                    expires_in: 15 * 60     // access token expires in 15 mins
+                }
+            }
+        })
+    }
+)
+
+
 
 export default router
