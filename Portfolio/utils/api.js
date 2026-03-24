@@ -10,7 +10,7 @@ export const FMPAPIBaseURL = process.env.FMP_API_BASE_URL
 export async function searchCoingecko(query) {
     try {
         // Search coingecko's /coins/markets endpoint for assets matching the search query in either the name or symbol fields
-        const resp = await fetch(`${CoingeckoAPIBaseURL}/coins/markets?vs_currency=usd&names=${encodeURIComponent(query)}&symbols=${encodeURIComponent(query)}&x_cg_demo_api_key=${CoingeckoAPIKey}`)
+        const resp = await fetch(`${CoingeckoAPIBaseURL}/coins/markets?vs_currency=usd&names=${encodeURIComponent(query)}&symbols=${encodeURIComponent(query)}&x_cg_demo_api_key=${CoingeckoAPIKey}&per_page=10`)
 
         // check if response is ok, if not throw an error to be caught in the catch block
         if ( !resp.ok ) {
@@ -35,10 +35,45 @@ export async function searchCoingecko(query) {
 }
 
 // FMP Specific API routes
-export async function searchFMP(query) {
+
+// Search FMP's stocks
+export async function searchFMPStocks(query) {
     try {
         // search FMP's API for assets matching the search query
-        const resp = await fetch(`${FMPAPIBaseURL}/search-symbol?apikey=${FMPAPIKey}&query=${encodeURIComponent(query)}`);
+        const resp = await fetch(`${FMPAPIBaseURL}/search-symbol?apikey=${FMPAPIKey}&query=${encodeURIComponent(query)}&limit=10`);
+
+        // check if response is ok, if not throw an error to be caught in the catch block
+        if ( !resp.ok ) {
+            throw new Error(`FMP API error: ${resp.status} ${resp.statusText}`)
+        }
+
+        // parse success response data as JSON
+        let data = await resp.json()
+
+        // transform response data removing any crypto since FMP is not used for crypto assets
+        data = data.filter( function ( item ) {
+            return item.exchange !== "CRYPTO" || item.exchangeFullName !== "CCC"
+        })
+
+        // add FMP as provider field to each item in the data array so the frontend knows 
+        // which API the search result came from
+        data = data.map( function ( item ) {
+            return { ...item, provider: "FMP" }
+        } )
+
+        // return search results as success status with data
+        return { status: "success", data }
+    } catch ( error ) {
+        console.log("Error searching FMP API:", error.message)
+        return { status: "error", error: error.message }
+    }
+}
+
+// Search FMP's Companies
+export async function searchFMPCompanies(query) {
+    try {
+        // search FMP's API for assets matching the search query
+        const resp = await fetch(`${FMPAPIBaseURL}/search-name?apikey=${FMPAPIKey}&query=${encodeURIComponent(query)}&limit=10`);
 
         // check if response is ok, if not throw an error to be caught in the catch block
         if ( !resp.ok ) {

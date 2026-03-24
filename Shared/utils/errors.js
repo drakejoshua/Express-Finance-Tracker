@@ -15,6 +15,8 @@ export const ERROR_CODES = {
     INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
     PROFILE_UPDATE_FAILURE: "PROFILE_UPDATE_FAILURE",
     INVALID_SEARCH_QUERY: "INVALID_SEARCH_QUERY",
+    INVALID_SEARCH_TERM: "INVALID_SEARCH_TERM",
+    ASSET_SEARCH_FAILURE: "ASSET_SEARCH_FAILURE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -184,4 +186,26 @@ InvalidSearchQueryError.code = ERROR_CODES.INVALID_SEARCH_QUERY
 
 export function reportInvalidSearchQueryError( next ) {
     return next( InvalidSearchQueryError )
+}
+
+
+// invalid search term error for when a user provides an invalid search 
+// query parameter in the request to search for assets that doesn't meet 
+// the validation criteria (e.g. empty string or only whitespace)
+export const InvalidSearchTermError = new Error("The provided search term is invalid. Please provide a valid search term and try again.")
+InvalidSearchTermError.status = 400
+InvalidSearchTermError.code = ERROR_CODES.INVALID_SEARCH_TERM
+
+export function reportInvalidSearchTermError( next ) {
+    return next( InvalidSearchTermError )
+}
+
+
+// asset search failure error for when there's an error during the asset search process (e.g. API request failure)
+export const AssetSearchFailureError = new Error("There was an error searching for assets. Please try again later.")
+AssetSearchFailureError.status = 500
+AssetSearchFailureError.code = ERROR_CODES.ASSET_SEARCH_FAILURE
+
+export function reportAssetSearchFailureError( next ) {
+    return next( AssetSearchFailureError )
 }
