@@ -40,15 +40,29 @@ export async function searchCoingecko(query) {
 export async function searchFMPStocks(query) {
     try {
         // search FMP's API for assets matching the search query
-        const resp = await fetch(`${FMPAPIBaseURL}/search-symbol?apikey=${FMPAPIKey}&query=${encodeURIComponent(query)}&limit=10`);
+        const preResp = await fetch(`${FMPAPIBaseURL}/search-symbol?apikey=${FMPAPIKey}&query=${encodeURIComponent(query)}&limit=10`);
 
         // check if response is ok, if not throw an error to be caught in the catch block
-        if ( !resp.ok ) {
-            throw new Error(`FMP API error: ${resp.status} ${resp.statusText}`)
+        if ( !preResp.ok ) {
+            throw new Error(`FMP API error: ${preResp.status} ${preResp.statusText}`)
         }
 
         // parse success response data as JSON
-        let data = await resp.json()
+        let preData = await preResp.json()
+
+        const postResp = await Promise.all( preData.map( async function ( item ) {
+            return fetch(`${FMPAPIBaseURL}/profile/?symbol=${item.symbol}&apikey=${FMPAPIKey}`)
+        } ) )
+
+        if ( !postResp ) {
+            throw new Error(`FMP API error: ${postResp.status} ${postResp.statusText}`)
+        }
+
+        let data = await Promise.all( postResp.map( async function ( resp ) {
+            const arrayData = await resp.json()
+
+            return arrayData[0] 
+        } ) )
 
         // transform response data removing any crypto since FMP is not used for crypto assets
         data = data.filter( function ( item ) {
@@ -73,15 +87,29 @@ export async function searchFMPStocks(query) {
 export async function searchFMPCompanies(query) {
     try {
         // search FMP's API for assets matching the search query
-        const resp = await fetch(`${FMPAPIBaseURL}/search-name?apikey=${FMPAPIKey}&query=${encodeURIComponent(query)}&limit=10`);
+        const preResp = await fetch(`${FMPAPIBaseURL}/search-name?apikey=${FMPAPIKey}&query=${encodeURIComponent(query)}&limit=10`);
 
         // check if response is ok, if not throw an error to be caught in the catch block
-        if ( !resp.ok ) {
-            throw new Error(`FMP API error: ${resp.status} ${resp.statusText}`)
+        if ( !preResp.ok ) {
+            throw new Error(`FMP API error: ${preResp.status} ${preResp.statusText}`)
         }
 
         // parse success response data as JSON
-        let data = await resp.json()
+        let preData = await preResp.json()
+
+        const postResp = await Promise.all( preData.map( async function ( item ) {
+            return fetch(`${FMPAPIBaseURL}/profile/?symbol=${item.symbol}&apikey=${FMPAPIKey}`)
+        } ) )
+
+        if ( !postResp ) {
+            throw new Error(`FMP API error: ${postResp.status} ${postResp.statusText}`)
+        }
+
+        let data = await Promise.all( postResp.map( async function ( resp ) {
+            const arrayData = await resp.json()
+
+            return arrayData[0] 
+        } ) )
 
         // transform response data removing any crypto since FMP is not used for crypto assets
         data = data.filter( function ( item ) {
