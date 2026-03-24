@@ -14,6 +14,7 @@ export const ERROR_CODES = {
     INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
     INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
     PROFILE_UPDATE_FAILURE: "PROFILE_UPDATE_FAILURE",
+    INVALID_SEARCH_QUERY: "INVALID_SEARCH_QUERY",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -172,4 +173,15 @@ ProfileUpdateFailureError.code = ERROR_CODES.PROFILE_UPDATE_FAILURE
 
 export function reportProfileUpdateFailureError( next ) {
     return next( ProfileUpdateFailureError )
+}
+
+
+// invalid search query error for when a user provides an invalid search 
+// query parameter in the request to search for assets
+export const InvalidSearchQueryError = new Error("The provided search query is invalid. Please provide a valid search query and try again.")
+InvalidSearchQueryError.status = 400
+InvalidSearchQueryError.code = ERROR_CODES.INVALID_SEARCH_QUERY
+
+export function reportInvalidSearchQueryError( next ) {
+    return next( InvalidSearchQueryError )
 }

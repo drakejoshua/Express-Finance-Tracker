@@ -5,8 +5,9 @@ import { NotFound } from './Shared/middleware/NotFound.js'
 import { error } from './Shared/middleware/error.js'
 import { logger } from './Shared/middleware/logger.js'
 import authRoutes from './Auth/routes.js'
+import portfolioRoutes from './Portfolio/routes.js'
 import passport from 'passport'
-import { configurePassport } from './Auth/middleware/passport.js'
+import { configurePassport } from './Shared/middleware/passport.js'
 import cors from 'cors'
 
 const server = express()
@@ -44,6 +45,9 @@ server.use(express.urlencoded({ extended: true }))
 
 // add auth routes with /auth prefix
 server.use("/auth", authRoutes )
+
+// add portfolio routes with /app prefix
+server.use("/app/assets", portfolioRoutes )
 
 
 // not found middleware to catch all unmatched routes and return 404
