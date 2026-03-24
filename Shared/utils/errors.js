@@ -8,7 +8,8 @@ export const ERROR_CODES = {
     EMAIL_EXISTS: "EMAIL_EXISTS",
     FILE_UPLOAD_ERROR: "FILE_UPLOAD_ERROR",
     EMAIL_NOT_FOUND: "EMAIL_NOT_FOUND",
-    INVALID_AUTHENTICATION_METHOD: "INVALID_AUTHENTICATION_METHOD",
+    INVALID_EMAIL_AUTHENTICATION_METHOD: "INVALID_EMAIL_AUTHENTICATION_METHOD",
+    INVALID_GOOGLE_AUTHENTICATION_METHOD: "INVALID_GOOGLE_AUTHENTICATION_METHOD",
     INVALID_PASSWORD: "INVALID_PASSWORD",
     INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
     INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
@@ -111,12 +112,23 @@ export function reportEmailNotFoundError( next ) {
 
 // invalid authentication method error for when a user tries to log in with
 // an email that is registered with a different authentication method (e.g. Google)
-export const InvalidAuthenticationMethodError = new Error("The account associated with the provided email address does not use email-password authentication. Please sign in using the google account option.")
-InvalidAuthenticationMethodError.status = 400
-InvalidAuthenticationMethodError.code = ERROR_CODES.INVALID_AUTHENTICATION_METHOD
+export const InvalidEmailAuthenticationMethodError = new Error("The account associated with the provided email address does not use email-password authentication. Please sign in using the google account option.")
+InvalidEmailAuthenticationMethodError.status = 400
+InvalidEmailAuthenticationMethodError.code = ERROR_CODES.INVALID_AUTHENTICATION_METHOD
 
-export function reportInvalidAuthenticationMethodError( next ) {
-    return next( InvalidAuthenticationMethodError )
+export function reportInvalidEmailAuthenticationMethodError( next ) {
+    return next( InvalidEmailAuthenticationMethodError )
+}
+
+
+// invalid authentication method error for when a user tries to log in with
+// a Google account that is registered with a different authentication method (e.g. email-password)
+export const InvalidGoogleAuthenticationMethodError = new Error("The account associated with the provided email address does not use Google authentication. Please sign in using the email and password option.")
+InvalidGoogleAuthenticationMethodError.status = 400
+InvalidGoogleAuthenticationMethodError.code = ERROR_CODES.INVALID_GOOGLE_AUTHENTICATION_METHOD
+
+export function reportInvalidGoogleAuthenticationMethodError( next ) {
+    return next( InvalidGoogleAuthenticationMethodError )
 }
 
 

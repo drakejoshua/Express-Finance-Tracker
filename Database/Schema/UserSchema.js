@@ -74,7 +74,8 @@ UserSchema.statics.signUp = async function( signUpData ) {
     const user = new this({
         name: signUpData.name,
         email: signUpData.email,
-        password: signUpData.password,
+        password: signUpData?.password || "google_oauth_user",
+        provider: signUpData?.provider || "local",
         profile_photo: signUpData?.profile_photo,
         profile_photo_public_id: signUpData?.profile_photo_public_id,
         email_verification_expires: signUpData?.email_verification_expires,

@@ -300,7 +300,7 @@ router.get("/me",
 )
 
 
-// POST /auth/refresh - refresh the user's access token using the refresh token stored 
+// GET /auth/refresh - refresh the user's access token using the refresh token stored 
 // in the HTTP-only cookie
 router.post("/refresh",
     [
@@ -372,5 +372,42 @@ router.post("/refresh",
     }   
 )
 
+
+// GET /auth/google - handle Google OAuth login/signup, requires a valid Google ID token in the request body
+router.get("/google",
+    // use passport Google strategy to authenticate the user 
+    // by redirecting them to the Google OAuth consent screen
+    passport.authenticate("google", { scope: [ "profile", "email" ] })
+)
+
+router.get("/google/callback",
+    passport.authenticate( "google", { session: false }),
+    async function( req, res, next ) {
+        // if authentication is successful, generate access and refresh tokens for the user
+        const accessToken = generateAccessToken( req.user._id )
+        const refreshToken = generateRefreshToken( req.user._id )
+
+        console.log("User authenticated with Google:", req.user )
+
+        // save the refresh token to the user's document in the database
+        req.user.refresh_token = refreshToken
+        await req.user.save()
+
+        // set the refresh token as an HTTP-only cookie in the response
+        res.cookie( "refresh_token", refreshToken, refreshTokenCookieOptions )
+
+        // send success response to the client with the user's profile data and access token
+        return res.status( 200 ).json({
+            status: "success",
+            data: {
+                user: {
+                    ...req.user.getProfileData(),
+                    access_token: accessToken,
+                    expires_in: 15 * 60     // access token expires in 15 mins
+                }
+            }
+        })
+    }
+)
 
 export default router

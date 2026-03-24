@@ -1,13 +1,15 @@
 import passport from "passport"
 import { Strategy as LocalStrategy } from "passport-local"
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt"
+import { Strategy as GoogleStrategy } from "passport-google-oauth20"
 import Users from "../../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
 import { 
     EmailNotFoundError, 
-    InvalidAuthenticationMethodError, 
+    InvalidEmailAuthenticationMethodError, 
     InvalidAuthorizationTokenError, 
-    InvalidPasswordError 
+    InvalidPasswordError, 
+    InvalidGoogleAuthenticationMethodError
 } from "../../Shared/utils/errors.js"
 
 export function configurePassport( passport ) {
@@ -31,7 +33,7 @@ export function configurePassport( passport ) {
 
                 // check if the user found uses email-password authentication method
                 if ( user.provider !== "local" ) {
-                    return done( InvalidAuthenticationMethodError, false );
+                    return done( InvalidEmailAuthenticationMethodError, false );
                 }
 
                 // if user is found, compare the provided password with the hashed password in the database
@@ -74,6 +76,44 @@ export function configurePassport( passport ) {
                 return done( null, user )
             } catch ( error ) {
                 console.log( "Error in JWT strategy:", error )
+                return done( error, false )
+            }
+        }
+    ))
+
+    // configure google OAuth strategy for passport authentication
+    passport.use( new GoogleStrategy(
+        {
+            clientID: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            callbackURL: process.env.GOOGLE_REDIRECT_URI
+        },
+        async function( accessToken, refreshToken, profile, done ) {
+            try {
+                // find user by Google ID from the profile information
+                let user = await Users.findOne( { email: profile.emails[0].value } )
+
+                // if user not found, create a new user with the information from the Google profile
+                if ( !user ) {
+                    const newUser = await Users.signUp({
+                        name: profile.displayName,
+                        email: profile.emails[0].value,
+                        provider: "google",
+                        profile_photo: profile.photos[0].value
+                    })
+
+                    // return the newly created user object back to passport
+                    return done( null, newUser )
+                }
+
+                // if user is found, check if the user uses Google authentication method
+                if ( user.provider != "google" ) {
+                    return done( InvalidGoogleAuthenticationMethodError, false )
+                }
+
+                // if all checks pass, return the user object
+                return done( null, user )
+            } catch ( error ) {
                 return done( error, false )
             }
         }
