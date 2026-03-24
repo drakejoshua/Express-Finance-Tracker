@@ -10,7 +10,7 @@ import {
     InvalidAuthorizationTokenError, 
     InvalidPasswordError, 
     InvalidGoogleAuthenticationMethodError
-} from "../../Shared/utils/errors.js"
+} from "../utils/errors.js"
 
 export function configurePassport( passport ) {
     // configure local strategy for passport authentication
