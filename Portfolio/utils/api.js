@@ -137,3 +137,101 @@ export async function searchFMPCompanies(query) {
         return { status: "error", error: error.message }
     }
 }
+
+
+// Get asset details from FMP by symbol
+export async function getFMPAssetDetails(symbol) {
+    // create date range for historical price endpoint to get 
+    // the last 7 days of historical price data for the asset
+    const fromDate = new Date( Date.now() - 7 * 24 * 60 * 60 * 1000 ).toISOString().split("T")[0]   // 7 days ago in ISO format (YYYY-MM-DD)
+    const toDate = new Date().toISOString().split("T")[0]   // today in ISO format (YYYY-MM-DD)
+
+    try {
+        // fetch the profile endpoint and historical price endpoint for the asset in parallel 
+        // using Promise.all to optimize performance since both endpoints are needed to get all 
+        // the details for the asset
+        const resp = await Promise.all( [
+             // get asset details like name, exchange, industry, etc
+            fetch(`${FMPAPIBaseURL}/profile/?symbol=${symbol}&apikey=${FMPAPIKey}`),
+
+            // get historical price data for the asset for the last 7 days
+            fetch(`${FMPAPIBaseURL}/historical-price-eod/light?symbol=${symbol}&apikey=${FMPAPIKey}&from=${fromDate}&to=${toDate}`)
+        ] )
+
+        // check if both responses are ok, if not throw an error to be caught in the catch block
+        if ( resp ) {
+            // since both requests are successful, check if 
+            // each response in the array is valid before continuing to parse the data
+            const postResp = await Promise.all( resp.map( async function ( response ) {
+                // if any response is not ok, throw an error to be caught in the catch block
+                if ( !response.ok ) {
+                    console.log("error thrown from here 1")
+                    throw new Error(`FMP API error: ${response.status} ${response.statusText}`)
+                }
+
+                // parse success response data as JSON and return it
+                return await response.json()
+            } ) )
+
+            // combine the data from both endpoints into a single object to return to the frontend
+            const data = {
+                details: postResp[0],
+                chart: postResp[1]
+            }
+
+            // since both requests are successful and the data is parsed, 
+            // return the combined data as a success status with the data
+            return { status: "success", data }
+        } else {            
+            throw new Error(`FMP API error: ${resp.status} ${resp.statusText}`)
+        }
+
+    } catch ( error ) {
+        // console.log("Error fetching asset details from FMP API:", error.message)
+        return { status: "error", error: error.message }
+    }
+}
+
+// Get asset details from Coingecko by id
+export async function getCoingeckoAssetDetails(id) {
+    try {
+        // fetch the coin details endpoint and market chart endpoint for the asset in parallel 
+        // using Promise.all to optimize performance since both endpoints are needed to get all 
+        // the details for the asset
+        const resp = await Promise.all([
+            // get asset details like name, symbol, description, etc
+            fetch(`${CoingeckoAPIBaseURL}/coins/${id}?x_cg_demo_api_key=${CoingeckoAPIKey}`),
+            // get historical price data for the asset for the last 7 days
+            fetch(`${CoingeckoAPIBaseURL}/coins/${id}/market_chart?vs_currency=usd&days=7&x_cg_demo_api_key=${CoingeckoAPIKey}`)
+        ])
+
+        // check if both responses are ok, if not throw an error to be caught in the catch block
+        if ( resp ) {
+            // since both requests are successful, check if 
+            // each response in the array is valid before continuing to parse the data
+            const postResp = await Promise.all( resp.map( async function ( response ) {
+                // if any response is not ok, throw an error to be caught in the catch block
+                if ( !response.ok ) {
+                    throw new Error(`Coingecko API error: ${response.status} ${response.statusText}`)
+                }
+
+                // parse success response data as JSON and return it
+                return await response.json()
+            } ) )
+
+            // combine the data from both endpoints into a single object to return to the frontend
+            const data = {
+                details: postResp[0],
+                chart: postResp[1]
+            }
+
+            // since both requests are successful and the data is parsed, 
+            // return the combined data as a success status with the data
+            return { status: "success", data }
+        } else {
+            throw new Error(`Coingecko API error: ${resp.status} ${resp.statusText}`)
+        }
+    } catch ( error ) {
+        return { status: "error", error: error.message }
+    }
+}

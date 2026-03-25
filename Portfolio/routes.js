@@ -348,5 +348,104 @@ router.put("/:symbol",
 )
 
 
+router.get("/:symbol",
+    [
+        param("symbol")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail()
+            .isLength({ min: 1, max: 20 })
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail(),
+        header("Authorization")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail(),
+        query("provider")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_ASSET_PROVIDER )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ASSET_PROVIDER )
+            .bail()
+            .isIn([ "fmp", "coingecko" ])
+            .withMessage( ERROR_CODES.INVALID_ASSET_PROVIDER )
+            .bail()
+    ],
+    async function ( req, res, next ) {
+        // validate request parameters, query parameters and headers
+        const errors = validationResult( req )
+
+        // report the first validation error encountered, if any
+        if ( !errors.isEmpty() ) {
+            switch ( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_ASSET_SYMBOL:
+                    return reportInvalidAssetSymbolError( next )
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+                case ERROR_CODES.INVALID_ASSET_PROVIDER:
+                    return reportInvalidAssetProviderError( next )
+            }
+        }
+
+        // if no validation errors, proceed to validate the JWT and get the asset details from the user's portfolio
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function ( req, res, next ) {
+        // get the authenticated user from the request object 
+        // (populated by passport after successful JWT validation)
+        const user = req.user
+
+        // get the asset details to be retrieved from the request parameters and query parameters
+        const symbol = req.params.symbol
+        const provider = req.query.provider
+
+        // get asset details from FMP or Coingecko based on the provider specified in the query parameter
+        try {
+            let assetDetails
+
+            if ( provider === "fmp" ) {
+                assetDetails = await getFMPAssetDetails( symbol )
+            } else if ( provider === "coingecko" ) {
+                assetDetails = await getCoingeckoAssetDetails( symbol )
+            }
+
+            if ( assetDetails.status === "error" ) {
+                throw new Error( assetDetails.error )
+            } else {
+                // get the asset from the user's portfolio to retrieve the units field
+                const portfolioAsset = user.portfolio.find( function ( item ) {
+                    return item.symbol === symbol && item.provider === provider
+                })
+
+                if ( portfolioAsset ) {
+                    return res.json({ status: "success", data: {
+                        ...assetDetails.data,
+                        units: portfolioAsset.units
+                    } })
+                } else {
+                    return res.json({ status: "success", data: {
+                        ...assetDetails.data,
+                        units: 0
+                    } })
+                }
+            }
+        } catch( err ) {
+            reportAssetSearchFailureError( next )
+        }
+    }
+)
+
+
 // export router for use in server.js
 export default router
