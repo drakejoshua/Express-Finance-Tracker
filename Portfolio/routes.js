@@ -1,7 +1,7 @@
 import express from "express";
 import Users from "../Database/Schema/UserSchema.js";
 import { query, param, body, validationResult, header } from "express-validator";
-import { ERROR_CODES, reportAssetSearchFailureError, reportInvalidAssetProviderError, reportInvalidAssetQuantityError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidSearchTermError } from "../Shared/utils/errors.js";
+import { ERROR_CODES, reportAssetSearchFailureError, reportInvalidAssetProviderError, reportInvalidAssetQuantityError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidRequestDataError, reportInvalidSearchTermError } from "../Shared/utils/errors.js";
 import passport from "passport";
 import { validateBearerJWT } from "../Auth/utils/validators.js";
 import { getCoingeckoAssetDetails, getFMPAssetDetails, searchCoingecko, searchFMPCompanies, searchFMPStocks } from "./utils/api.js";
@@ -379,6 +379,11 @@ router.get("/:symbol",
             .bail()
             .isIn([ "fmp", "coingecko" ])
             .withMessage( ERROR_CODES.INVALID_ASSET_PROVIDER )
+            .bail(),
+        query("chart_limit")
+            .optional()
+            .isInt({ min: 1, max: 365 })
+            .withMessage( ERROR_CODES.INVALID_REQUEST_DATA )
             .bail()
     ],
     async function ( req, res, next ) {
@@ -394,6 +399,8 @@ router.get("/:symbol",
                     return reportInvalidAuthorizationTokenError( next )
                 case ERROR_CODES.INVALID_ASSET_PROVIDER:
                     return reportInvalidAssetProviderError( next )
+                case ERROR_CODES.INVALID_REQUEST_DATA:
+                    return reportInvalidRequestDataError( next )
             }
         }
 
@@ -409,15 +416,16 @@ router.get("/:symbol",
         // get the asset details to be retrieved from the request parameters and query parameters
         const symbol = req.params.symbol
         const provider = req.query.provider
+        const chartLimit = req.query.chart_limit || 7
 
         // get asset details from FMP or Coingecko based on the provider specified in the query parameter
         try {
             let assetDetails
 
             if ( provider === "fmp" ) {
-                assetDetails = await getFMPAssetDetails( symbol )
+                assetDetails = await getFMPAssetDetails( symbol, chartLimit )
             } else if ( provider === "coingecko" ) {
-                assetDetails = await getCoingeckoAssetDetails( symbol )
+                assetDetails = await getCoingeckoAssetDetails( symbol, chartLimit )
             }
 
             if ( assetDetails.status === "error" ) {

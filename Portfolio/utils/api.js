@@ -140,10 +140,10 @@ export async function searchFMPCompanies(query) {
 
 
 // Get asset details from FMP by symbol
-export async function getFMPAssetDetails(symbol) {
+export async function getFMPAssetDetails( symbol, chartLimit ) {
     // create date range for historical price endpoint to get 
     // the last 7 days of historical price data for the asset
-    const fromDate = new Date( Date.now() - 7 * 24 * 60 * 60 * 1000 ).toISOString().split("T")[0]   // 7 days ago in ISO format (YYYY-MM-DD)
+    const fromDate = new Date( Date.now() - chartLimit * 24 * 60 * 60 * 1000 ).toISOString().split("T")[0]   // 7 days ago in ISO format (YYYY-MM-DD)
     const toDate = new Date().toISOString().split("T")[0]   // today in ISO format (YYYY-MM-DD)
 
     try {
@@ -202,7 +202,7 @@ export async function getCoingeckoAssetDetails(id) {
             // get asset details like name, symbol, description, etc
             fetch(`${CoingeckoAPIBaseURL}/coins/${id}?x_cg_demo_api_key=${CoingeckoAPIKey}`),
             // get historical price data for the asset for the last 7 days
-            fetch(`${CoingeckoAPIBaseURL}/coins/${id}/market_chart?vs_currency=usd&days=7&x_cg_demo_api_key=${CoingeckoAPIKey}`)
+            fetch(`${CoingeckoAPIBaseURL}/coins/${id}/market_chart?vs_currency=usd&days=${chartLimit}&x_cg_demo_api_key=${CoingeckoAPIKey}`)
         ])
 
         // check if both responses are ok, if not throw an error to be caught in the catch block
