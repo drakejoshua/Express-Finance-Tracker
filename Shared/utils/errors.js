@@ -16,6 +16,10 @@ export const ERROR_CODES = {
     PROFILE_UPDATE_FAILURE: "PROFILE_UPDATE_FAILURE",
     INVALID_SEARCH_TERM: "INVALID_SEARCH_TERM",
     ASSET_SEARCH_FAILURE: "ASSET_SEARCH_FAILURE",
+    INVALID_ASSET_SYMBOL: "INVALID_ASSET_SYMBOL",
+    INVALID_ASSET_QUANTITY: "INVALID_ASSET_QUANTITY",
+    INVALID_ASSET_PROVIDER: "INVALID_ASSET_PROVIDER",
+    ASSET_ADDITION_FAILURE: "ASSET_ADDITION_FAILURE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -196,4 +200,47 @@ AssetSearchFailureError.code = ERROR_CODES.ASSET_SEARCH_FAILURE
 
 export function reportAssetSearchFailureError( next ) {
     return next( AssetSearchFailureError )
+}
+
+
+// invalid asset symbol error for when a user provides an invalid asset symbol in the request body to add an asset to their portfolio
+export const InvalidAssetSymbolError = new Error("The provided asset symbol is invalid. Please provide a valid asset symbol and try again.")
+InvalidAssetSymbolError.status = 400
+InvalidAssetSymbolError.code = ERROR_CODES.INVALID_ASSET_SYMBOL
+
+export function reportInvalidAssetSymbolError( next ) {
+    return next( InvalidAssetSymbolError )
+}
+
+
+// invalid asset quantity error for when a user provides an invalid asset quantity in the request body to add 
+// an asset to their portfolio (e.g. negative number or non-numeric value)
+export const InvalidAssetQuantityError = new Error("The provided asset quantity is invalid. Please provide a valid asset quantity and try again.")
+InvalidAssetQuantityError.status = 400
+InvalidAssetQuantityError.code = ERROR_CODES.INVALID_ASSET_QUANTITY
+
+export function reportInvalidAssetQuantityError( next ) {
+    return next( InvalidAssetQuantityError )
+}
+
+
+// invalid asset provider error for when a user provides an invalid asset provider in the 
+// request body to add an asset to their portfolio (e.g. a provider that is not FMP or Coingecko)
+export const InvalidAssetProviderError = new Error("The provided asset provider is invalid. Please use either FMP or coingecko")
+InvalidAssetProviderError.status = 400
+InvalidAssetProviderError.code = ERROR_CODES.INVALID_ASSET_PROVIDER
+
+export function reportInvalidAssetProviderError( next ) {
+    return next( InvalidAssetProviderError )
+}
+
+
+// asset addition failure error for when there's an error during the process of adding 
+// an asset to the user's portfolio (e.g. database error)
+export const AssetAdditionFailureError = new Error("There was an error adding the asset to your portfolio. Please try again later.")
+AssetAdditionFailureError.status = 500
+AssetAdditionFailureError.code = ERROR_CODES.ASSET_ADDITION_FAILURE
+
+export function reportAssetAdditionFailureError( next ) {
+    return next( AssetAdditionFailureError )
 }

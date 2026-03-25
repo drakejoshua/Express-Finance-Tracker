@@ -3,8 +3,16 @@ import { supportedCurrencies } from "../../Shared/utils/supportedCurrencies.js";
 
 // Asset schema to represent individual assets in the user's portfolio
 const AssetSchema = mongoose.Schema({
-    symbol: String,
-    units: Number
+    symbol: {
+        type: String,
+        required: true
+    },
+    units: Number,
+    provider: {
+        type: String,
+        enum: [ "FMP", "Coingecko" ],
+        required: true
+    }
 })
 
 // User schema to represent user data in the database with validation rules and default values
@@ -66,6 +74,25 @@ UserSchema.methods.getProfileData = function() {
         portfolio: this.portfolio,
         watchlist: this.watchlist
     }
+}
+
+
+UserSchema.methods.addAsset = async function( asset ) {
+    // check if the asset already exists in the user's portfolio by matching 
+    // the symbol and provider fields
+    const existingAssetIndex = this.portfolio.findIndex( function ( item ) {
+        return item.symbol === asset.symbol && item.provider === asset.provider
+    })
+
+    if ( existingAssetIndex !== -1 ) {
+        // If the asset already exists, update its quantity
+        this.portfolio[existingAssetIndex].units += asset.units
+    } else {
+        // If the asset doesn't exist, add it to the portfolio
+        this.portfolio.push( asset )
+    }
+
+    return this.save()
 }
 
 // static method to create a new user in the database with the provided 
