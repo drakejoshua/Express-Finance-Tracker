@@ -37,6 +37,8 @@ router.post("/signup",
     [
         body("email")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_EMAIL )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_EMAIL )
             .bail()
@@ -46,6 +48,8 @@ router.post("/signup",
             .normalizeEmail(),
         body("password")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_PASSWORD_FORMAT )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_PASSWORD_FORMAT )
             .bail()
@@ -54,6 +58,8 @@ router.post("/signup",
             .bail(),
         body("name")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_USERNAME )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_USERNAME )
             .bail()
@@ -134,6 +140,8 @@ router.post("/login",
     [
         body("email")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_EMAIL )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_EMAIL )
             .bail()
@@ -143,6 +151,8 @@ router.post("/login",
             .normalizeEmail(),
         body("password")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_PASSWORD_FORMAT )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_PASSWORD_FORMAT )
             .bail()
@@ -213,6 +223,8 @@ router.post("/logout",
     [
         header("Authorization")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
             .bail()
@@ -259,6 +271,8 @@ router.get("/me",
     [
         header("Authorization")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
             .bail()
@@ -306,6 +320,8 @@ router.post("/refresh",
     [
         cookie("refresh_token")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_REFRESH_TOKEN )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_REFRESH_TOKEN )
             .bail()
@@ -424,6 +440,8 @@ router.post("/update",
     [
         header("Authorization")
             .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
             .notEmpty()
             .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
             .bail()
