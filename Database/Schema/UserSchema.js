@@ -10,7 +10,7 @@ const AssetSchema = mongoose.Schema({
     units: Number,
     provider: {
         type: String,
-        enum: [ "FMP", "Coingecko" ],
+        enum: [ "fmp", "coingecko" ],
         required: true
     }
 })
