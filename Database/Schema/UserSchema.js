@@ -77,6 +77,26 @@ UserSchema.methods.getProfileData = function() {
 }
 
 
+// static method to create a new user in the database with the provided 
+// sign-up data such as: name, email, password, optional profile photo URL and public ID
+UserSchema.statics.signUp = async function( signUpData ) {
+    const user = new this({
+        name: signUpData.name,
+        email: signUpData.email,
+        password: signUpData?.password || "google_oauth_user",
+        provider: signUpData?.provider || "local",
+        profile_photo: signUpData?.profile_photo,
+        profile_photo_public_id: signUpData?.profile_photo_public_id,
+        email_verification_expires: signUpData?.email_verification_expires,
+        email_verification_token: signUpData?.email_verification_token
+    })
+
+    await user.save()
+
+    return user
+}
+
+
 UserSchema.methods.addAsset = async function( asset ) {
     // check if the asset already exists in the user's portfolio by matching 
     // the symbol and provider fields
@@ -95,23 +115,13 @@ UserSchema.methods.addAsset = async function( asset ) {
     return this.save()
 }
 
-// static method to create a new user in the database with the provided 
-// sign-up data such as: name, email, password, optional profile photo URL and public ID
-UserSchema.statics.signUp = async function( signUpData ) {
-    const user = new this({
-        name: signUpData.name,
-        email: signUpData.email,
-        password: signUpData?.password || "google_oauth_user",
-        provider: signUpData?.provider || "local",
-        profile_photo: signUpData?.profile_photo,
-        profile_photo_public_id: signUpData?.profile_photo_public_id,
-        email_verification_expires: signUpData?.email_verification_expires,
-        email_verification_token: signUpData?.email_verification_token
+UserSchema.methods.removeAsset = async function( symbol, provider ) {
+    // filter the portfolio to remove the asset that matches the symbol and provider
+    this.portfolio = this.portfolio.filter( function ( item ) {
+        return !( item.symbol === symbol && item.provider === provider )
     })
 
-    await user.save()
-
-    return user
+    return this.save()
 }
 
 export default mongoose.model( "Users", UserSchema )

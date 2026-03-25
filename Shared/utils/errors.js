@@ -20,6 +20,7 @@ export const ERROR_CODES = {
     INVALID_ASSET_QUANTITY: "INVALID_ASSET_QUANTITY",
     INVALID_ASSET_PROVIDER: "INVALID_ASSET_PROVIDER",
     ASSET_ADDITION_FAILURE: "ASSET_ADDITION_FAILURE",
+    ASSET_DELETION_FAILURE: "ASSET_DELETION_FAILURE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -232,15 +233,4 @@ InvalidAssetProviderError.code = ERROR_CODES.INVALID_ASSET_PROVIDER
 
 export function reportInvalidAssetProviderError( next ) {
     return next( InvalidAssetProviderError )
-}
-
-
-// asset addition failure error for when there's an error during the process of adding 
-// an asset to the user's portfolio (e.g. database error)
-export const AssetAdditionFailureError = new Error("There was an error adding the asset to your portfolio. Please try again later.")
-AssetAdditionFailureError.status = 500
-AssetAdditionFailureError.code = ERROR_CODES.ASSET_ADDITION_FAILURE
-
-export function reportAssetAdditionFailureError( next ) {
-    return next( AssetAdditionFailureError )
 }
