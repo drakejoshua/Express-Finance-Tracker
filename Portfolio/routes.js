@@ -9,6 +9,9 @@ import { searchCoingecko, searchFMPCompanies, searchFMPStocks } from "./utils/ap
 
 const router = express.Router()
 
+
+// GET /app/portfolio/search/:query - Search for assets to add to the portfolio
+// requires a valid JWT in the Authorization header and a search query parameter in the URL
 router.get("/search/:query",
     [
         param("query")
@@ -71,6 +74,8 @@ router.get("/search/:query",
     }
 )
 
+// POST /app/portfolio/assets - Add an asset to the user's portfolio
+// requires a valid JWT in the Authorization header and asset details in the request body
 router.post("/",
     [
         header("Authorization")
@@ -164,6 +169,9 @@ router.post("/",
     }
 )
 
+// DELETE /app/portfolio/assets/:symbol?provider={ FMP | Coingecko } - Remove an asset from 
+// the user's portfolio requires a valid JWT in the Authorization header and the asset symbol 
+// as a URL parameter along with the provider as a query parameter
 router.delete("/:symbol",
     [
         param("symbol")
