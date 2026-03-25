@@ -4,7 +4,7 @@ import { query, param, body, validationResult, header } from "express-validator"
 import { ERROR_CODES, reportAssetSearchFailureError, reportInvalidAssetProviderError, reportInvalidAssetQuantityError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidSearchTermError } from "../Shared/utils/errors.js";
 import passport from "passport";
 import { validateBearerJWT } from "../Auth/utils/validators.js";
-import { searchCoingecko, searchFMPCompanies, searchFMPStocks } from "./utils/api.js";
+import { getCoingeckoAssetDetails, getFMPAssetDetails, searchCoingecko, searchFMPCompanies, searchFMPStocks } from "./utils/api.js";
 
 
 const router = express.Router()
@@ -251,6 +251,102 @@ router.delete("/:symbol",
         }
     }
 )
+
+
+// PUT /app/portfolio/assets/:symbol?provider={ FMP | Coingecko } - Update the units of an asset in the user's portfolio
+// requires a valid JWT in the Authorization header, the asset symbol as a URL parameter, 
+// the provider as a query parameter and the new units in the request body
+router.put("/:symbol",
+    [
+        param("symbol")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail()
+            .isLength({ min: 1, max: 20 })
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail(),
+        header("Authorization")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail(),
+        query("provider")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_ASSET_PROVIDER )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ASSET_PROVIDER )
+            .bail()
+            .isIn([ "fmp", "coingecko" ])
+            .withMessage( ERROR_CODES.INVALID_ASSET_PROVIDER )
+            .bail(),
+        body("units")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_REQUEST_DATA )
+            .bail()
+            .isInt({ min: 1 })
+            .withMessage( ERROR_CODES.INVALID_REQUEST_DATA )
+            .bail()
+    ],
+    async function ( req, res, next ) {
+        // validate request parameters, query parameters, request body and headers
+        const errors = validationResult( req )
+
+        // report the first validation error encountered, if any
+        if ( !errors.isEmpty() ) {
+            switch ( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_ASSET_SYMBOL:
+                    return reportInvalidAssetSymbolError( next )
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+                case ERROR_CODES.INVALID_ASSET_PROVIDER:
+                    return reportInvalidAssetProviderError( next )
+                case ERROR_CODES.INVALID_REQUEST_DATA:
+                    return reportInvalidRequestDataError( next )
+            }
+        }
+
+        // if no validation errors, proceed to validate the JWT and update the asset in the user's portfolio
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function ( req, res, next ) {
+        // get the authenticated user from the request object 
+        // (populated by passport after successful JWT validation)
+        const user = req.user
+
+        // get the asset details to be updated from the request parameters, 
+        // query parameters and request body
+        const symbol = req.params.symbol
+        const provider = req.query.provider
+        const units = req.body.units
+
+        try {
+            // update the asset in the user's portfolio using the updateAsset
+            // method defined in the UserSchema
+            await user.updateAsset( symbol, provider, units )
+
+            // return the success response indicating the asset was updated 
+            // in the portfolio successfully
+            return res.json({ status: "success", data: {
+                message: "Asset updated in portfolio successfully",
+            } })
+        } catch( err ) {
+            err.message = "An error occurred while trying to update the asset in the portfolio. Please try again later."
+            err.code = ERROR_CODES.ASSET_UPDATE_FAILURE
+            return next( err )
+        }
+    }
+)
+
 
 // export router for use in server.js
 export default router

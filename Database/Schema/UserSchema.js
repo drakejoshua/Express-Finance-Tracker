@@ -124,4 +124,25 @@ UserSchema.methods.removeAsset = async function( symbol, provider ) {
     return this.save()
 }
 
+UserSchema.methods.updateAsset = async function( symbol, provider, newUnits ) {
+    // find the index of the asset in the portfolio that matches the symbol and provider
+    const assetIndex = this.portfolio.findIndex( function ( item ) {
+        return item.symbol === symbol && item.provider === provider
+    })
+
+    if ( assetIndex !== -1 ) {
+        // If the asset exists, update its quantity with the new value
+        this.portfolio[assetIndex].units = newUnits
+    } else {
+        // if asset doesn't exist, add it to the portfolio with the provided symbol, provider and units
+        this.portfolio.push({
+            symbol: symbol,
+            provider: provider,
+            units: newUnits
+        })
+    }
+
+    return this.save()
+}
+
 export default mongoose.model( "Users", UserSchema )

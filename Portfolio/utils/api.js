@@ -59,6 +59,10 @@ export async function searchFMPStocks(query) {
         }
 
         let data = await Promise.all( postResp.map( async function ( resp ) {
+            if ( !resp.ok ) {
+                throw new Error(`FMP API error: ${resp.status} ${resp.statusText}`)
+            }
+
             const arrayData = await resp.json()
 
             return arrayData[0] 
@@ -106,6 +110,10 @@ export async function searchFMPCompanies(query) {
         }
 
         let data = await Promise.all( postResp.map( async function ( resp ) {
+            if ( !resp.ok ) {
+                throw new Error(`FMP API error: ${resp.status} ${resp.statusText}`)
+            }
+
             const arrayData = await resp.json()
 
             return arrayData[0] 

@@ -21,6 +21,8 @@ export const ERROR_CODES = {
     INVALID_ASSET_PROVIDER: "INVALID_ASSET_PROVIDER",
     ASSET_ADDITION_FAILURE: "ASSET_ADDITION_FAILURE",
     ASSET_DELETION_FAILURE: "ASSET_DELETION_FAILURE",
+    ASSET_UPDATE_FAILURE: "ASSET_UPDATE_FAILURE",
+    INVALID_REQUEST_DATA: "INVALID_REQUEST_DATA",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -233,4 +235,15 @@ InvalidAssetProviderError.code = ERROR_CODES.INVALID_ASSET_PROVIDER
 
 export function reportInvalidAssetProviderError( next ) {
     return next( InvalidAssetProviderError )
+}
+
+
+// invalid request data error for when a user provides invalid or incomplete data 
+// in the request body to add an asset to their portfolio
+export const InvalidRequestDataError = new Error("The provided data in the request body is invalid or incomplete. Please provide valid asset details and try again.")
+InvalidRequestDataError.status = 400
+InvalidRequestDataError.code = ERROR_CODES.INVALID_REQUEST_DATA
+
+export function reportInvalidRequestDataError( next ) {
+    return next( InvalidRequestDataError )
 }
