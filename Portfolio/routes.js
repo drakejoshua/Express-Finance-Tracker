@@ -453,6 +453,9 @@ router.get("/:symbol",
 )
 
 
+// GET /app/portfolio/assets?limit={number} - Get the list of assets in the user's portfolio with 
+// pagination, requires a valid JWT in the Authorization header and an optional limit 
+// query parameter to specify the number of assets to return (default is 10)
 router.get("/",
     [
         header("Authorization")
@@ -513,19 +516,20 @@ router.get("/",
                 } )
             )
 
+            // if any of the asset details fetch operations resulted in an error, 
+            // report a generic asset search failure error
             if ( portfolioAssetsDetails.some( asset => asset.status === "error" ) ) {
                 throw new Error( "" )
             }
 
-            // combine the asset details with the units field from the user's portfolio and return in the response
+            // combine the asset details with the fields from the user's portfolio and return in the response
             const responseData = portfolioAssets.map( function( asset, index ) {
                 const assetDetails = portfolioAssetsDetails[index]
                 const cleanAsset = asset.toObject()
 
                 return {
                     ...assetDetails.data,
-                    ...cleanAsset,
-                    units: cleanAsset.units || 0
+                    ...cleanAsset
                 }
             } )
 
