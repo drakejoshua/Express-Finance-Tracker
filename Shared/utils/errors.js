@@ -23,6 +23,7 @@ export const ERROR_CODES = {
     ASSET_DELETION_FAILURE: "ASSET_DELETION_FAILURE",
     ASSET_UPDATE_FAILURE: "ASSET_UPDATE_FAILURE",
     INVALID_REQUEST_DATA: "INVALID_REQUEST_DATA",
+    INVALID_REQUEST_QUERY: "INVALID_REQUEST_QUERY",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -246,4 +247,15 @@ InvalidRequestDataError.code = ERROR_CODES.INVALID_REQUEST_DATA
 
 export function reportInvalidRequestDataError( next ) {
     return next( InvalidRequestDataError )
+}
+
+
+// invalid request query error for when a user provides invalid query parameters 
+// in the request to get asset details (e.g. invalid provider or chart limit values)
+export const InvalidRequestQueryError = new Error("The provided query parameters are invalid. Please provide valid query parameters and try again.")
+InvalidRequestQueryError.status = 400
+InvalidRequestQueryError.code = ERROR_CODES.INVALID_REQUEST_QUERY
+
+export function reportInvalidRequestQueryError( next ) {
+    return next( InvalidRequestQueryError )
 }

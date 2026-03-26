@@ -140,7 +140,7 @@ export async function searchFMPCompanies(query) {
 
 
 // Get asset details from FMP by symbol
-export async function getFMPAssetDetails( symbol, chartLimit ) {
+export async function getFMPAssetDetails( symbol, chartLimit = 7 ) {
     // create date range for historical price endpoint to get 
     // the last 7 days of historical price data for the asset
     const fromDate = new Date( Date.now() - chartLimit * 24 * 60 * 60 * 1000 ).toISOString().split("T")[0]   // 7 days ago in ISO format (YYYY-MM-DD)
@@ -175,7 +175,7 @@ export async function getFMPAssetDetails( symbol, chartLimit ) {
 
             // combine the data from both endpoints into a single object to return to the frontend
             const data = {
-                details: postResp[0],
+                details: postResp[0][0],
                 chart: postResp[1]
             }
 
@@ -193,7 +193,7 @@ export async function getFMPAssetDetails( symbol, chartLimit ) {
 }
 
 // Get asset details from Coingecko by id
-export async function getCoingeckoAssetDetails(id) {
+export async function getCoingeckoAssetDetails( id, chartLimit = 7 ) {
     try {
         // fetch the coin details endpoint and market chart endpoint for the asset in parallel 
         // using Promise.all to optimize performance since both endpoints are needed to get all 

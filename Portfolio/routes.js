@@ -1,7 +1,7 @@
 import express from "express";
 import Users from "../Database/Schema/UserSchema.js";
 import { query, param, body, validationResult, header } from "express-validator";
-import { ERROR_CODES, reportAssetSearchFailureError, reportInvalidAssetProviderError, reportInvalidAssetQuantityError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidRequestDataError, reportInvalidSearchTermError } from "../Shared/utils/errors.js";
+import { ERROR_CODES, reportAssetSearchFailureError, reportInvalidAssetProviderError, reportInvalidAssetQuantityError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidRequestDataError, reportInvalidRequestQueryError, reportInvalidSearchTermError } from "../Shared/utils/errors.js";
 import passport from "passport";
 import { validateBearerJWT } from "../Auth/utils/validators.js";
 import { getCoingeckoAssetDetails, getFMPAssetDetails, searchCoingecko, searchFMPCompanies, searchFMPStocks } from "./utils/api.js";
@@ -347,7 +347,9 @@ router.put("/:symbol",
     }
 )
 
-
+// GET /app/portfolio/assets/:symbol?provider={ FMP | Coingecko } - Get the details of an asset 
+// in the user's portfolio requires a valid JWT in the Authorization header, the asset symbol 
+// as a URL parameter and the provider as a query parameter
 router.get("/:symbol",
     [
         param("symbol")
@@ -383,7 +385,7 @@ router.get("/:symbol",
         query("chart_limit")
             .optional()
             .isInt({ min: 1, max: 365 })
-            .withMessage( ERROR_CODES.INVALID_REQUEST_DATA )
+            .withMessage( ERROR_CODES.INVALID_REQUEST_QUERY )
             .bail()
     ],
     async function ( req, res, next ) {
@@ -399,8 +401,8 @@ router.get("/:symbol",
                     return reportInvalidAuthorizationTokenError( next )
                 case ERROR_CODES.INVALID_ASSET_PROVIDER:
                     return reportInvalidAssetProviderError( next )
-                case ERROR_CODES.INVALID_REQUEST_DATA:
-                    return reportInvalidRequestDataError( next )
+                case ERROR_CODES.INVALID_REQUEST_QUERY:
+                    return reportInvalidRequestQueryError( next )
             }
         }
 
@@ -429,27 +431,107 @@ router.get("/:symbol",
             }
 
             if ( assetDetails.status === "error" ) {
-                throw new Error( assetDetails.error )
-            } else {
-                // get the asset from the user's portfolio to retrieve the units field
-                const portfolioAsset = user.portfolio.find( function ( item ) {
-                    return item.symbol === symbol && item.provider === provider
-                })
-
-                if ( portfolioAsset ) {
-                    return res.json({ status: "success", data: {
-                        ...assetDetails.data,
-                        units: portfolioAsset.units
-                    } })
-                } else {
-                    return res.json({ status: "success", data: {
-                        ...assetDetails.data,
-                        units: 0
-                    } })
-                }
+                throw new Error( "" )
             }
+
+            // get the asset from the user's portfolio to retrieve the units field
+            const portfolioAsset = user.portfolio.find( function ( item ) {
+                return item.symbol === symbol && item.provider === provider
+            })
+
+            return res.json({ status: "success", data: {
+                ...assetDetails.data,
+                symbol,
+                provider,
+                units: portfolioAsset?.units || 0
+            } })
         } catch( err ) {
+            console.error( err )
             reportAssetSearchFailureError( next )
+        }
+    }
+)
+
+
+router.get("/",
+    [
+        header("Authorization")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail(),
+        query("limit")
+            .optional()
+            .isInt({ min: 1, max: 100 })
+            .withMessage( ERROR_CODES.INVALID_REQUEST_QUERY )
+            .bail()
+    ],
+    async function ( req, res, next ) {
+        // validate request query parameters and headers
+        const errors = validationResult( req )
+
+        // report the first validation error encountered, if any
+        if ( !errors.isEmpty() ) {
+            switch ( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+                case ERROR_CODES.INVALID_REQUEST_QUERY:
+                    return reportInvalidRequestQueryError( next )
+            }
+        }
+
+        // if no validation errors, proceed to validate the JWT and get the list of assets in the user's portfolio with pagination and sorting
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function ( req, res, next ) {
+        // get the authenticated user from the request object 
+        // (populated by passport after successful JWT validation)
+        const user = req.user
+
+        // get pagination and sorting details from query parameters
+        const limit = req.query.limit || 10
+
+        try {
+            // get the list of assets in the user's portfolio with pagination and sorting
+            const portfolioAssets = user.portfolio.slice( 0, limit )
+
+            // fetch the details of each asset in the portfolio from FMP or Coingecko based 
+            // on the provider specified for each asset
+            const portfolioAssetsDetails = await Promise.all(
+                portfolioAssets.map( function( asset ) {
+                    if ( asset.provider === "fmp" ) {
+                        return getFMPAssetDetails( asset.symbol )
+                    } else { 
+                        return getCoingeckoAssetDetails( asset.symbol )
+                    }
+                } )
+            )
+
+            if ( portfolioAssetsDetails.some( asset => asset.status === "error" ) ) {
+                throw new Error( "" )
+            }
+
+            // combine the asset details with the units field from the user's portfolio and return in the response
+            const responseData = portfolioAssets.map( function( asset, index ) {
+                const assetDetails = portfolioAssetsDetails[index]
+                const cleanAsset = asset.toObject()
+
+                return {
+                    ...assetDetails.data,
+                    ...cleanAsset,
+                    units: cleanAsset.units || 0
+                }
+            } )
+
+            return res.json({ status: "success", data: responseData })
+        } catch( err ) {
+            return reportAssetSearchFailureError( next )
         }
     }
 )
