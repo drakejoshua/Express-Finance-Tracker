@@ -410,6 +410,8 @@ router.get("/google/callback",
         const accessToken = generateAccessToken( req.user._id )
         const refreshToken = generateRefreshToken( req.user._id )
 
+        console.log("User authenticated with Google:", req.user )
+
         // save the refresh token to the user's document in the database
         req.user.refresh_token = refreshToken
         await req.user.save()

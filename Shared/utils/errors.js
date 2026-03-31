@@ -14,16 +14,6 @@ export const ERROR_CODES = {
     INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
     INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
     PROFILE_UPDATE_FAILURE: "PROFILE_UPDATE_FAILURE",
-    INVALID_SEARCH_TERM: "INVALID_SEARCH_TERM",
-    ASSET_SEARCH_FAILURE: "ASSET_SEARCH_FAILURE",
-    INVALID_ASSET_SYMBOL: "INVALID_ASSET_SYMBOL",
-    INVALID_ASSET_QUANTITY: "INVALID_ASSET_QUANTITY",
-    INVALID_ASSET_PROVIDER: "INVALID_ASSET_PROVIDER",
-    ASSET_ADDITION_FAILURE: "ASSET_ADDITION_FAILURE",
-    ASSET_DELETION_FAILURE: "ASSET_DELETION_FAILURE",
-    ASSET_UPDATE_FAILURE: "ASSET_UPDATE_FAILURE",
-    INVALID_REQUEST_DATA: "INVALID_REQUEST_DATA",
-    INVALID_REQUEST_QUERY: "INVALID_REQUEST_QUERY",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -182,80 +172,4 @@ ProfileUpdateFailureError.code = ERROR_CODES.PROFILE_UPDATE_FAILURE
 
 export function reportProfileUpdateFailureError( next ) {
     return next( ProfileUpdateFailureError )
-}
-
-
-// invalid search term error for when a user provides an invalid search 
-// query parameter in the request to search for assets that doesn't meet 
-// the validation criteria (e.g. empty string or only whitespace)
-export const InvalidSearchTermError = new Error("The provided search term is invalid. Please provide a valid search term and try again.")
-InvalidSearchTermError.status = 400
-InvalidSearchTermError.code = ERROR_CODES.INVALID_SEARCH_TERM
-
-export function reportInvalidSearchTermError( next ) {
-    return next( InvalidSearchTermError )
-}
-
-
-// asset search failure error for when there's an error during the asset search process (e.g. API request failure)
-export const AssetSearchFailureError = new Error("There was an error searching for assets. Please try again later.")
-AssetSearchFailureError.status = 500
-AssetSearchFailureError.code = ERROR_CODES.ASSET_SEARCH_FAILURE
-
-export function reportAssetSearchFailureError( next ) {
-    return next( AssetSearchFailureError )
-}
-
-
-// invalid asset symbol error for when a user provides an invalid asset symbol in the request body to add an asset to their portfolio
-export const InvalidAssetSymbolError = new Error("The provided asset symbol is invalid. Please provide a valid asset symbol and try again.")
-InvalidAssetSymbolError.status = 400
-InvalidAssetSymbolError.code = ERROR_CODES.INVALID_ASSET_SYMBOL
-
-export function reportInvalidAssetSymbolError( next ) {
-    return next( InvalidAssetSymbolError )
-}
-
-
-// invalid asset quantity error for when a user provides an invalid asset quantity in the request body to add 
-// an asset to their portfolio (e.g. negative number or non-numeric value)
-export const InvalidAssetQuantityError = new Error("The provided asset quantity is invalid. Please provide a valid asset quantity and try again.")
-InvalidAssetQuantityError.status = 400
-InvalidAssetQuantityError.code = ERROR_CODES.INVALID_ASSET_QUANTITY
-
-export function reportInvalidAssetQuantityError( next ) {
-    return next( InvalidAssetQuantityError )
-}
-
-
-// invalid asset provider error for when a user provides an invalid asset provider in the 
-// request body to add an asset to their portfolio (e.g. a provider that is not FMP or Coingecko)
-export const InvalidAssetProviderError = new Error("The provided asset provider is invalid. Please use either FMP or coingecko")
-InvalidAssetProviderError.status = 400
-InvalidAssetProviderError.code = ERROR_CODES.INVALID_ASSET_PROVIDER
-
-export function reportInvalidAssetProviderError( next ) {
-    return next( InvalidAssetProviderError )
-}
-
-
-// invalid request data error for when a user provides invalid or incomplete data 
-// in the request body to add an asset to their portfolio
-export const InvalidRequestDataError = new Error("The provided data in the request body is invalid or incomplete. Please provide valid asset details and try again.")
-InvalidRequestDataError.status = 400
-InvalidRequestDataError.code = ERROR_CODES.INVALID_REQUEST_DATA
-
-export function reportInvalidRequestDataError( next ) {
-    return next( InvalidRequestDataError )
-}
-
-
-// invalid request query error for when a user provides invalid query parameters 
-// in the request to get asset details (e.g. invalid provider or chart limit values)
-export const InvalidRequestQueryError = new Error("The provided query parameters are invalid. Please provide valid query parameters and try again.")
-InvalidRequestQueryError.status = 400
-InvalidRequestQueryError.code = ERROR_CODES.INVALID_REQUEST_QUERY
-
-export function reportInvalidRequestQueryError( next ) {
-    return next( InvalidRequestQueryError )
 }
