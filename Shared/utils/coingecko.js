@@ -25,17 +25,18 @@ export async function searchCoinsByQuery( query ) {
             status: "success",
             data
         }
-    } catch( err ) {
-        console.log("coingecko fetch error: ", err.message)
+    } catch( error ) {
+        console.log("coingecko fetch error: ", error.message)
         return {
             status: "error",
-            err
+            error
         }
     }
 }
 
 
-
+// getCoinDetails function to get detailed information about a specific coin by its 
+// symbol as coin_id using the Coingecko API
 export async function getCoinDetails( symbol ) {
     try {
         const resp = await fetch(`${CoingeckoAPIBaseURL}/coins/${ encodeURIComponent(symbol) }?x_cg_demo_api_key=${CoingeckoAPIKey}&` + 
@@ -55,11 +56,50 @@ export async function getCoinDetails( symbol ) {
             status: "success",
             data
         }
-    } catch( err ) {
-        console.log("coingecko fetch error: ", err.message)
+    } catch( error ) {
+        console.log("coingecko fetch error: ", error.message)
         return {
             status: "error",
-            err
+            error
+        }
+    }
+}
+
+
+// getCoinMarketChart function to get historical market chart data for a specific coin by its
+// symbol as coin_id and a specified time range (e.g. 7 days, 30 days) using the Coingecko API
+export async function getCoinMarketChart( symbol, range ) {
+    try {
+        // query coingecko coins/{id}/market_chart endpoint to return historical price 
+        // data for the coin that matches the symbol param and the specified range
+        const resp = await fetch(`${CoingeckoAPIBaseURL}/coins/${ encodeURIComponent(symbol) }/` +
+        `market_chart?x_cg_demo_api_key=${CoingeckoAPIKey}&vs_currency=usd&days=${encodeURIComponent(range)}` +
+        `&interval=hourly`)
+        
+        // check if response is "200 ok", if not, check if it's a rate limit error (429) 
+        // and throw an appropriate error message
+        if ( !resp.ok ) {
+            if ( resp.status === 429 ) {
+                throw new Error(`Error fetching market chart for "${ symbol }" from coingecko: Rate limit exceeded`)
+            }
+
+            throw new Error(`Error fetching market chart for "${ symbol }" from coingecko: ${resp.status} ${resp.statusText}`)
+        }
+
+        // convert query response to consumable json
+        const data = await resp.json()
+
+        // return success status and the raw market chart data, which includes an 
+        // array of price points with timestamps
+        return {
+            status: "success",
+            data
+        }
+    } catch( error ) {
+        console.log("coingecko fetch error: ", error.message)
+        return {
+            status: "error",
+            error
         }
     }
 }

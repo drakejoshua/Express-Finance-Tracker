@@ -2,9 +2,9 @@
 import express from 'express'
 import { query, header, validationResult, param } from 'express-validator'
 import passport from 'passport'
-import { ERROR_CODES, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidSearchQueryError } from '../Shared/utils/errors.js'
+import { ERROR_CODES, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidChartDataRangeError, reportInvalidSearchQueryError } from '../Shared/utils/errors.js'
 import { validateBearerJWT } from '../Shared/utils/validators.js'
-import { getCoinDetails, searchCoinsByQuery } from '../Shared/utils/coingecko.js'
+import { getCoinDetails, getCoinMarketChart, searchCoinsByQuery } from '../Shared/utils/coingecko.js'
 
 
 // create a router instance for defining the /assets/* routes
@@ -53,14 +53,22 @@ router.get("/search",
     },
     passport.authenticate("jwt", { session: false }),
     async function ( req, res, next ) {
+        // extract the "query" query parameter from the request object
         const { query } = req.query
 
+        // call the searchCoinsByQuery function to search for coins matching the query 
+        // string using the Coingecko API
         const { status, error, data } = await searchCoinsByQuery( query )
 
+        // if there was an error fetching the search results, 
+        // report a fetch operation faliure error with the error message 
+        // from the coingecko fetch attempt
         if ( status === "error" ) {
             return reportFetchOperationFaliureError( next )
         } 
         
+        // if the fetch was successful, return a json response with the search results data,
+        // mapping the relevant coin details (id, name, image) for each coin in the results
         return res.json({
             status,
             data: data.coins.map( function( coin ) {
@@ -75,6 +83,9 @@ router.get("/search",
 )
 
 
+// GET /assets/:symbol - get detailed information about a specific coin by its 
+// symbol using the Coingecko API, and also check if the authenticated user has the 
+// coin in their portfolio or watchlist to include that information in the response
 router.get("/:symbol", 
     [
         param("symbol")
@@ -148,10 +159,15 @@ router.get("/:symbol",
             is_portfolio: false
         }
 
+        // if the symbol is in the user's watchlist, add an "is_watchlist" field 
+        // to the response data with a value of true
         if ( isInWatchlist ) {
             responseData.is_watchlist = true
         }
 
+        // if the symbol is in the user's portfolio, add an "is_portfolio" field 
+        // to the response data with a value of true, and also include the asset's 
+        // quantity and total amount in the portfolio based on the current price
         if ( portfolioAsset ) {
             responseData.is_portfolio = true
             responseData.portfolio = {
@@ -166,6 +182,90 @@ router.get("/:symbol",
         return res.json({
             status,
             data: responseData
+        })
+    }
+)
+
+
+// GET /assets/:symbol/chart?days={days} - get historical price data for a specific coin by its 
+// symbol and a specified time range (e.g. 7 days, 30 days) using the Coingecko API
+router.get("/:symbol/chart", 
+    [
+        param("symbol")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ASSET_SYMBOL )
+            .bail(),
+        query("days")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_CHART_DATA_RANGE )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_CHART_DATA_RANGE )
+            .bail()
+            .isIn([ "1", "7", "30", "90", "180", "365" ])
+            .withMessage( ERROR_CODES.INVALID_CHART_DATA_RANGE )
+            .bail(),
+        header("Authorization")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+    ],
+    function( req, res, next ) {
+        // extract validation errors from request object
+        const errors = validationResult( req )
+
+        // check for validation errors if any
+        if ( !errors.isEmpty() ) {
+            switch( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+                case ERROR_CODES.INVALID_ASSET_SYMBOL:
+                    return reportInvalidAssetSymbolError( next )
+                case ERROR_CODES.INVALID_CHART_DATA_RANGE:
+                    return reportInvalidChartDataRangeError( next )
+            }
+        }
+
+        // process to next middleware if there are no validation errors
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function( req, res, next ) {
+        // extract symbol params data from request 
+        const symbol = req.params.symbol
+        const days = req.query.days
+
+        // extract coin details from coingecko api using the symbol param
+        const { status, error, data } = await getCoinMarketChart( symbol, days )
+
+        // if there was an error fetching the coin details, 
+        // report a fetch operation faliure error with the error message 
+        // from the coingecko fetch attempt
+        if ( status === "error" ) {
+            return reportFetchOperationFaliureError( next, error.message )
+        }
+
+        // if the fetch was successful, return a json response with the 
+        // destructured coin details
+        return res.json({
+            status,
+            data: {
+                prices: data.prices.map( function( pricePoint ) {
+                    return {
+                        timestamp: pricePoint[0],
+                        price: pricePoint[1]
+                    }
+                })
+            }
         })
     }
 )

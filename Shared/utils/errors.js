@@ -22,6 +22,7 @@ export const ERROR_CODES = {
     INVALID_SEARCH_QUERY: "INVALID_SEARCH_QUERY",
     FETCH_OPERATION_FALIURE: "FETCH_OPERATION_FALIURE",
     INVALID_ASSET_SYMBOL: "INVALID_ASSET_SYMBOL",
+    INVALID_CHART_DATA_RANGE: "INVALID_CHART_DATA_RANGE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -194,7 +195,7 @@ export function reportInvalidSearchQueryError( next ) {
 
 
 // fetch operation faliure error for reporting coingecko api fetch faliures
-export const FetchOperationFaliureError = new Error("There an error querying our external data provider, Please try again ina few minutes")
+export const FetchOperationFaliureError = new Error("There an error querying our external data provider, Please try again in a few minutes")
 FetchOperationFaliureError.status = 404
 FetchOperationFaliureError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
 
@@ -210,4 +211,14 @@ InvalidAssetSymbolError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
 
 export function reportInvalidAssetSymbolError( next ) {
     return next( InvalidAssetSymbolError )
+}
+
+
+// invalid chart data range error for when a user tries to fetch asset chart data with an invalid range query parameter
+export const InvalidChartDataRangeError = new Error("The chart data range parameter is invalid. Valid range values are: 1d, 7d, 30d, 90d, 180d, 365d.")
+InvalidChartDataRangeError.status = 400
+InvalidChartDataRangeError.code = ERROR_CODES.INVALID_CHART_DATA_RANGE
+
+export function reportInvalidChartDataRangeError( next ) {
+    return next( InvalidChartDataRangeError )
 }
