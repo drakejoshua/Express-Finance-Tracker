@@ -7,12 +7,7 @@ const AssetSchema = mongoose.Schema({
         type: String,
         required: true
     },
-    units: Number,
-    provider: {
-        type: String,
-        enum: [ "fmp", "coingecko" ],
-        required: true
-    }
+    units: Number
 })
 
 // User schema to represent user data in the database with validation rules and default values
@@ -99,9 +94,9 @@ UserSchema.statics.signUp = async function( signUpData ) {
 
 UserSchema.methods.addAsset = async function( asset ) {
     // check if the asset already exists in the user's portfolio by matching 
-    // the symbol and provider fields
+    // the symbol field
     const existingAssetIndex = this.portfolio.findIndex( function ( item ) {
-        return item.symbol === asset.symbol && item.provider === asset.provider
+        return item.symbol === asset.symbol
     })
 
     if ( existingAssetIndex !== -1 ) {
@@ -115,29 +110,28 @@ UserSchema.methods.addAsset = async function( asset ) {
     return this.save()
 }
 
-UserSchema.methods.removeAsset = async function( symbol, provider ) {
-    // filter the portfolio to remove the asset that matches the symbol and provider
+UserSchema.methods.removeAsset = async function( symbol ) {
+    // filter the portfolio to remove the asset that matches the symbol
     this.portfolio = this.portfolio.filter( function ( item ) {
-        return !( item.symbol === symbol && item.provider === provider )
+        return !( item.symbol === symbol )
     })
 
     return this.save()
 }
 
-UserSchema.methods.updateAsset = async function( symbol, provider, newUnits ) {
-    // find the index of the asset in the portfolio that matches the symbol and provider
+UserSchema.methods.updateAsset = async function( symbol, newUnits ) {
+    // find the index of the asset in the portfolio that matches the symbol
     const assetIndex = this.portfolio.findIndex( function ( item ) {
-        return item.symbol === symbol && item.provider === provider
+        return item.symbol === symbol
     })
 
     if ( assetIndex !== -1 ) {
         // If the asset exists, update its quantity with the new value
         this.portfolio[assetIndex].units = newUnits
     } else {
-        // if asset doesn't exist, add it to the portfolio with the provided symbol, provider and units
+        // if asset doesn't exist, add it to the portfolio with the provided symbol and units
         this.portfolio.push({
             symbol: symbol,
-            provider: provider,
             units: newUnits
         })
     }
