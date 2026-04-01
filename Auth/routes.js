@@ -7,7 +7,7 @@ import Users from "../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
 import { generateAccessToken, generateRefreshToken, verifyJWT } from "./utils/tokens.js"
 import passport from "passport"
-import { validateBearerJWT } from "./utils/validators.js"
+import { validateBearerJWT } from "../Shared/utils/validators.js"
 import cookieParser from "cookie-parser"
 
 // create a router for auth routes

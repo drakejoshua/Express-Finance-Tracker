@@ -1,6 +1,9 @@
 export const ERROR_CODES = {
+    // general errors
     INVALID_ROUTE: "INVALID_ROUTE",
     DATABASE_CONNECTION_ERROR: "DATABASE_CONNECTION_ERROR",
+
+    // authentication and user errors
     INVALID_FILE_TYPE: "INVALID_FILE_TYPE",
     INVALID_EMAIL: "INVALID_EMAIL",
     INVALID_PASSWORD_FORMAT: "INVALID_PASSWORD_FORMAT",
@@ -14,6 +17,10 @@ export const ERROR_CODES = {
     INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
     INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
     PROFILE_UPDATE_FAILURE: "PROFILE_UPDATE_FAILURE",
+
+    // asset-related errors
+    INVALID_SEARCH_QUERY: "INVALID_SEARCH_QUERY",
+    FETCH_OPERATION_FALIURE: "FETCH_OPERATION_FALIURE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -172,4 +179,24 @@ ProfileUpdateFailureError.code = ERROR_CODES.PROFILE_UPDATE_FAILURE
 
 export function reportProfileUpdateFailureError( next ) {
     return next( ProfileUpdateFailureError )
+}
+
+
+// invalid search query error for when a user tries to search for assets with an invalid query parameter
+export const InvalidSearchQueryError = new Error("The search term is invalid. Please provide a valid search query.")
+InvalidSearchQueryError.status = 400
+InvalidSearchQueryError.code = ERROR_CODES.INVALID_SEARCH_QUERY
+
+export function reportInvalidSearchQueryError( next ) {
+    return next( InvalidSearchQueryError )
+}
+
+
+// fetch operation faliure error for reporting coingecko api fetch faliures
+export const FetchOperationFaliureError = new Error("There an error querying our external data provider, Please try again ina few minutes")
+FetchOperationFaliureError.status = 404
+FetchOperationFaliureError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
+
+export function reportFetchOperationFaliureError( next ) {
+    return next( FetchOperationFaliureError )
 }
