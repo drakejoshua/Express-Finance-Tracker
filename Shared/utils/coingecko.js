@@ -33,3 +33,33 @@ export async function searchCoinsByQuery( query ) {
         }
     }
 }
+
+
+
+export async function getCoinDetails( symbol ) {
+    try {
+        const resp = await fetch(`${CoingeckoAPIBaseURL}/coins/${ encodeURIComponent(symbol) }?x_cg_demo_api_key=${CoingeckoAPIKey}&` + 
+            `sparkline=true&developer_data=false&community_data=false&tickers=false&localization=false&include_categories_details=false`)
+
+        if ( !resp.ok ) {
+            if ( resp.status === 429 ) {
+                throw new Error(`Error fetching "${ symbol }" details from coingecko: Rate limit exceeded`)
+            }
+
+            throw new Error(`Error fetching "${ symbol }" details from coingecko: ${resp.status} ${resp.statusText}`)
+        }
+
+        const data = await resp.json()
+
+        return {
+            status: "success",
+            data
+        }
+    } catch( err ) {
+        console.log("coingecko fetch error: ", err.message)
+        return {
+            status: "error",
+            err
+        }
+    }
+}

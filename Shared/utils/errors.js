@@ -21,6 +21,7 @@ export const ERROR_CODES = {
     // asset-related errors
     INVALID_SEARCH_QUERY: "INVALID_SEARCH_QUERY",
     FETCH_OPERATION_FALIURE: "FETCH_OPERATION_FALIURE",
+    INVALID_ASSET_SYMBOL: "INVALID_ASSET_SYMBOL",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -122,7 +123,7 @@ export function reportEmailNotFoundError( next ) {
 // an email that is registered with a different authentication method (e.g. Google)
 export const InvalidEmailAuthenticationMethodError = new Error("The account associated with the provided email address does not use email-password authentication. Please sign in using the google account option.")
 InvalidEmailAuthenticationMethodError.status = 400
-InvalidEmailAuthenticationMethodError.code = ERROR_CODES.INVALID_AUTHENTICATION_METHOD
+InvalidEmailAuthenticationMethodError.code = ERROR_CODES.INVALID_EMAIL_AUTHENTICATION_METHOD
 
 export function reportInvalidEmailAuthenticationMethodError( next ) {
     return next( InvalidEmailAuthenticationMethodError )
@@ -197,6 +198,16 @@ export const FetchOperationFaliureError = new Error("There an error querying our
 FetchOperationFaliureError.status = 404
 FetchOperationFaliureError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
 
-export function reportFetchOperationFaliureError( next ) {
+export function reportFetchOperationFaliureError( next, message ) {
+    FetchOperationFaliureError.message = `${FetchOperationFaliureError.message}. ${ message }`
     return next( FetchOperationFaliureError )
+}
+
+// fetch operation faliure error for reporting coingecko api fetch faliures
+export const InvalidAssetSymbolError = new Error("The asset symbol is empty or invalid. Asset symbols needs to be at least 1 chars long.")
+InvalidAssetSymbolError.status = 400
+InvalidAssetSymbolError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
+
+export function reportInvalidAssetSymbolError( next ) {
+    return next( InvalidAssetSymbolError )
 }
