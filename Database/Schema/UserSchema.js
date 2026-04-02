@@ -92,7 +92,7 @@ UserSchema.statics.signUp = async function( signUpData ) {
 }
 
 
-UserSchema.methods.addAsset = async function( asset ) {
+UserSchema.methods.addAssetToPortfolio = async function( asset ) {
     // check if the asset already exists in the user's portfolio by matching 
     // the symbol field
     const existingAssetIndex = this.portfolio.findIndex( function ( item ) {
@@ -110,7 +110,7 @@ UserSchema.methods.addAsset = async function( asset ) {
     return this.save()
 }
 
-UserSchema.methods.removeAsset = async function( symbol ) {
+UserSchema.methods.removeAssetToPortfolio = async function( symbol ) {
     // filter the portfolio to remove the asset that matches the symbol
     this.portfolio = this.portfolio.filter( function ( item ) {
         return !( item.symbol === symbol )
@@ -119,7 +119,7 @@ UserSchema.methods.removeAsset = async function( symbol ) {
     return this.save()
 }
 
-UserSchema.methods.updateAsset = async function( symbol, newUnits ) {
+UserSchema.methods.updateAssetToPortfolio = async function( symbol, newUnits ) {
     // find the index of the asset in the portfolio that matches the symbol
     const assetIndex = this.portfolio.findIndex( function ( item ) {
         return item.symbol === symbol

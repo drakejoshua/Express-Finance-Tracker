@@ -23,6 +23,8 @@ export const ERROR_CODES = {
     FETCH_OPERATION_FALIURE: "FETCH_OPERATION_FALIURE",
     INVALID_ASSET_SYMBOL: "INVALID_ASSET_SYMBOL",
     INVALID_CHART_DATA_RANGE: "INVALID_CHART_DATA_RANGE",
+    INVALID_ASSET_UNITS: "INVALID_ASSET_UNITS",
+    PORTFOLIO_OPERATION_FAILURE: "PORTFOLIO_OPERATION_FAILURE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -200,25 +202,49 @@ FetchOperationFaliureError.status = 404
 FetchOperationFaliureError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
 
 export function reportFetchOperationFaliureError( next, message ) {
-    FetchOperationFaliureError.message = `${FetchOperationFaliureError.message}. ${ message }`
+    FetchOperationFaliureError.message = `${FetchOperationFaliureError.message}. ${ message || "" }`
     return next( FetchOperationFaliureError )
 }
 
 // fetch operation faliure error for reporting coingecko api fetch faliures
 export const InvalidAssetSymbolError = new Error("The asset symbol is empty or invalid. Asset symbols needs to be at least 1 chars long.")
 InvalidAssetSymbolError.status = 400
-InvalidAssetSymbolError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
+InvalidAssetSymbolError.code = ERROR_CODES.INVALID_ASSET_SYMBOL
 
 export function reportInvalidAssetSymbolError( next ) {
     return next( InvalidAssetSymbolError )
 }
 
 
-// invalid chart data range error for when a user tries to fetch asset chart data with an invalid range query parameter
+// invalid chart data range error for when a user tries to fetch asset chart 
+// data with an invalid range query parameter
 export const InvalidChartDataRangeError = new Error("The chart data range parameter is invalid. Valid range values are: 1d, 7d, 30d, 90d, 180d, 365d.")
 InvalidChartDataRangeError.status = 400
 InvalidChartDataRangeError.code = ERROR_CODES.INVALID_CHART_DATA_RANGE
 
 export function reportInvalidChartDataRangeError( next ) {
     return next( InvalidChartDataRangeError )
+}
+
+
+// invalid asset units error for when a user tries to add an asset to 
+// their portfolio with invalid units (e.g. negative units or non-numeric units)
+export const InvalidAssetUnitsError = new Error("The asset units value is empty or invalid. Units must be greater than zero.")
+InvalidAssetUnitsError.status = 400
+InvalidAssetUnitsError.code = ERROR_CODES.INVALID_ASSET_UNITS
+
+export function reportInvalidAssetUnitsError( next ) {
+    return next( InvalidAssetUnitsError )
+}
+
+
+// portfolio operation failure error for when a user tries to perform an operation 
+// on their portfolio but the operation fails for some reason (e.g. database error)
+export const PortfolioOperationFailureError = new Error("There was an error performing the requested operation on your portfolio. Please try again later.")
+PortfolioOperationFailureError.status = 500
+PortfolioOperationFailureError.code = ERROR_CODES.PORTFOLIO_OPERATION_FAILURE
+
+export function reportPortfolioOperationFailureError( next, message ) {
+    PortfolioOperationFailureError.message = `${PortfolioOperationFailureError.message}. ${ message || "" }`
+    return next( PortfolioOperationFailureError )
 }
