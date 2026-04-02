@@ -139,4 +139,11 @@ UserSchema.methods.updateAssetToPortfolio = async function( symbol, newUnits ) {
     return this.save()
 }
 
+UserSchema.methods.removeAssetFromPortfolio = async function( symbol ) {
+    // filter the portfolio to remove the asset that matches the symbol
+    this.portfolio = this.portfolio.filter( function ( item ) {
+        return !( item.symbol === symbol )
+    })
+}
+
 export default mongoose.model( "Users", UserSchema )

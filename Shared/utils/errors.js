@@ -25,6 +25,7 @@ export const ERROR_CODES = {
     INVALID_CHART_DATA_RANGE: "INVALID_CHART_DATA_RANGE",
     INVALID_ASSET_UNITS: "INVALID_ASSET_UNITS",
     PORTFOLIO_OPERATION_FAILURE: "PORTFOLIO_OPERATION_FAILURE",
+    ASSET_NOT_FOUND: "ASSET_NOT_FOUND",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -247,4 +248,15 @@ PortfolioOperationFailureError.code = ERROR_CODES.PORTFOLIO_OPERATION_FAILURE
 export function reportPortfolioOperationFailureError( next, message ) {
     PortfolioOperationFailureError.message = `${PortfolioOperationFailureError.message}. ${ message || "" }`
     return next( PortfolioOperationFailureError )
+}
+
+
+// asset not found error for when a user tries to perform an operation on an asset 
+// that doesn't exist in their portfolio
+export const AssetNotFoundError = new Error("The specified asset was not found in your portfolio or watchlist. Please check the asset symbol and try again.")
+AssetNotFoundError.status = 404
+AssetNotFoundError.code = ERROR_CODES.ASSET_NOT_FOUND
+
+export function reportAssetNotFoundError( next ) {
+    return next( AssetNotFoundError )
 }
