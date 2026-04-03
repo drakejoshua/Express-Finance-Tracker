@@ -35,6 +35,8 @@ export const ERROR_CODES = {
     INVALID_ALERT_TITLE: "INVALID_ALERT_TITLE",
     INVALID_ALERT_MESSAGE: "INVALID_ALERT_MESSAGE",
     ALERT_OPERATION_FAILURE: "ALERT_OPERATION_FAILURE",
+    INVALID_ALERT_ID: "INVALID_ALERT_ID",
+    ALERT_NOT_FOUND: "ALERT_NOT_FOUND",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -352,4 +354,26 @@ AlertOperationFailureError.code = ERROR_CODES.ALERT_OPERATION_FAILURE
 export function reportAlertOperationFailureError( next, message ) {
     AlertOperationFailureError.message = `${AlertOperationFailureError.message}. ${ message || "" }`
     return next( AlertOperationFailureError )
+}
+
+
+// invalid alert ID error for when a user/client sends a request with an
+// empty or invalid mongo objectId
+export const InvalidAlertIdError = new Error("The specified alert ID is invalid. Please check the alert ID and try again.")
+InvalidAlertIdError.status = 400
+InvalidAlertIdError.code = ERROR_CODES.INVALID_ALERT_ID
+
+export function reportInvalidAlertIdError( next ) {
+    return next( InvalidAlertIdError )
+}
+
+
+// alert not found error for when a user tries to perform an operation 
+// on an alert that doesn't exist in their alerts
+export const AlertNotFoundError = new Error("The specified alert was not found. Please check the alert ID and try again.")
+AlertNotFoundError.status = 404
+AlertNotFoundError.code = ERROR_CODES.ALERT_NOT_FOUND
+
+export function reportAlertNotFoundError( next ) {
+    return next( AlertNotFoundError )
 }

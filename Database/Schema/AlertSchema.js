@@ -56,6 +56,13 @@ alertSchema.statics.createAlert = async function( alertData ) {
     return alert.save()
 }
 
+alertSchema.statics.removeAlert = async function( alertId, userId ) {
+    return this.findOneAndDelete({
+        _id: alertId,
+        user_id: userId
+    })
+}
+
 
 // export the Alert model for use in other parts of the application
 export default mongoose.model("Alerts", alertSchema)
