@@ -66,6 +66,37 @@ export async function getCoinDetails( symbol ) {
 }
 
 
+// getBatchCoinsDetails function to get detailed information about multiple coins by their 
+// symbols as an array of coin_ids using the Coingecko API
+export async function getBatchCoinsDetails( comma_seperated_symbols_list ) {
+    try {
+        const resp = await fetch(`${CoingeckoAPIBaseURL}/coins/markets?vs_currency=usd&`+
+            `ids=${ comma_seperated_symbols_list }&price_change_percentage=24h&sparkline=true&`+
+            `locale=en&x_cg_demo_api_key=${CoingeckoAPIKey}&precision=2`)
+
+        if ( !resp.ok ) {
+            if ( resp.status === 429 ) {
+                throw new Error(`Error fetching batch coins details from coingecko: Rate limit exceeded`)
+            }
+
+            throw new Error(`Error fetching batch coins details from coingecko: ${resp.status} ${resp.statusText}`)
+        }
+        const data = await resp.json()
+
+        return {
+            status: "success",
+            data
+        }
+    } catch( error ) {
+        console.log("coingecko fetch error: ", error.message)
+        return {
+            status: "error",
+            error
+        }
+    }
+}
+
+
 // getCoinMarketChart function to get historical market chart data for a specific coin by its
 // symbol as coin_id and a specified time range (e.g. 7 days, 30 days) using the Coingecko API
 export async function getCoinMarketChart( symbol, range ) {

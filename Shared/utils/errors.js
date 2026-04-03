@@ -26,6 +26,7 @@ export const ERROR_CODES = {
     INVALID_ASSET_UNITS: "INVALID_ASSET_UNITS",
     PORTFOLIO_OPERATION_FAILURE: "PORTFOLIO_OPERATION_FAILURE",
     ASSET_NOT_FOUND: "ASSET_NOT_FOUND",
+    INVALID_PORTFOLIO_QUERY: "INVALID_PORTFOLIO_QUERY",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -259,4 +260,15 @@ AssetNotFoundError.code = ERROR_CODES.ASSET_NOT_FOUND
 
 export function reportAssetNotFoundError( next ) {
     return next( AssetNotFoundError )
+}
+
+
+// invalid portfolio query error for when a user tries to fetch their portfolio data with a missing or invalid
+// query param
+export const InvalidPortfolioQueryError = new Error("The query params provided for fetching portfolio data are invalid. Please provide valid query parameters and try again.")
+InvalidPortfolioQueryError.status = 400
+InvalidPortfolioQueryError.code = ERROR_CODES.INVALID_PORTFOLIO_QUERY
+
+export function reportInvalidPortfolioQueryError( next ) {
+    return next( InvalidPortfolioQueryError )
 }

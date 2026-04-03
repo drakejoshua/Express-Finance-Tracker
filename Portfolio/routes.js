@@ -2,13 +2,152 @@
 import express from 'express'
 import { query, header, body, validationResult, param } from 'express-validator'
 import passport from 'passport'
-import { ERROR_CODES, reportAssetNotFoundError, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAssetUnitsError, reportInvalidAuthorizationTokenError, reportInvalidChartDataRangeError, reportInvalidSearchQueryError, reportPortfolioOperationFailureError } from '../Shared/utils/errors.js'
+import { ERROR_CODES, reportAssetNotFoundError, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAssetUnitsError, reportInvalidAuthorizationTokenError, reportInvalidChartDataRangeError, reportInvalidPortfolioQueryError, reportInvalidSearchQueryError, reportPortfolioOperationFailureError } from '../Shared/utils/errors.js'
 import { validateBearerJWT } from '../Shared/utils/validators.js'
-import { getCoinDetails, getCoinMarketChart, searchCoinsByQuery } from '../Shared/utils/coingecko.js'
+import { getBatchCoinsDetails, getCoinDetails, getCoinMarketChart, searchCoinsByQuery } from '../Shared/utils/coingecko.js'
+import { sliceAndJoinArrayIntoChunksUsingLimit } from '../Shared/utils/arrays.js'
 
 
 // create a new router instance
 const router = express.Router()
+
+
+// GET /app/portfolio?limit={ int } - get the authenticated user's portfolio with current price, 
+// sparkline data, details for each asset and total portfolio summary. Requires a valid JWT token 
+// in the Authorization header.
+router.get("/", 
+    [
+        header("Authorization")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail(),
+        query("limit")
+            .optional()
+            .isInt({ gt: 0 })
+            .withMessage( ERROR_CODES.INVALID_PORTFOLIO_QUERY )
+            .bail()
+    ],
+    function( req, res, next ) {
+        // extract validation errors from the request if any
+        const errors = validationResult( req )
+
+        // check if there are validation errors and return the first error message if any
+        if ( !errors.isEmpty() ) {
+            switch ( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_PORTFOLIO_QUERY:
+                    return reportInvalidPortfolioQueryError( next )
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+            }
+        }
+
+        // proceed with the request handling if there are no validation errors
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function( req, res, next ) {
+        try {
+            // get the authenticated user from the request object 
+            // (populated by passport after successful authentication)
+            const authenticatedUser = req.user
+
+            // extract the optional limit query param from the request
+            const limit = req.query.limit || 10
+
+            // fetch all portfolio data from authenticated user document to calculate 
+            // the portfolio summary and return each asset's details and sparkline
+            let portfolioData = authenticatedUser.portfolio.map( ( asset ) => asset.symbol )
+
+            // split the authenticated-user portfolio array into a compiled array contains string as 
+            // a comma-seperated list of 49 symbols each. This is done to allow batch fetching of coin
+            // details from the coingecko API
+            let results = sliceAndJoinArrayIntoChunksUsingLimit( portfolioData, 49 )
+
+            // fetch details of the resulting symbol lists from coingecko at once
+            let batchCoinsDetailsResp = await Promise.all( results.map( function( symbols_ids ) {
+                return getBatchCoinsDetails( symbols_ids )
+            }))
+
+            // combine all the batch-fetched coin details into a flat array instead of the 
+            // normal response format gotten from the coingecko helper function
+            let batchCoinsDetails = []
+
+            batchCoinsDetailsResp.forEach( function( coinBatch ) {
+                if ( coinBatch.status === "error" ) {
+                    throw new Error( coinBatch.error.message )
+                }
+
+                batchCoinsDetails.push( ...coinBatch.data.map( ( coinDetails ) => coinDetails ) )
+            })
+
+
+            // get populated portfolio assets by mixing the data gotten from coingecko with the 
+            // authenticated-user portfolio data
+            let populatedPortfolioAssets = batchCoinsDetails.map( function( coinDetails ) {
+                const portfolioAssetDetails = authenticatedUser.portfolio.find( ( asset ) => coinDetails.id === asset.symbol )
+
+                return {
+                    id: coinDetails.id,
+                    name: coinDetails.name,
+                    image: coinDetails.image,
+                    price: coinDetails.current_price.toFixed(2),
+                    sparkline: coinDetails.sparkline_in_7d.price.map( ( price ) => price.toFixed(2) ),
+                    percent_change_24h: coinDetails.price_change_percentage_24h.toFixed(2),
+                    price_change_24h: coinDetails.price_change_24h.toFixed(2),
+                    balance: coinDetails.current_price.toFixed(2) * portfolioAssetDetails.units,
+                    balance_change_24h: coinDetails.price_change_24h.toFixed(2) * portfolioAssetDetails.units
+                }
+            })
+
+            // sort the populated portfolio assets in descending order ino order to
+            // get the top losers and top gainers in the users portfolio
+            let sortedPortfolioAssets = [...populatedPortfolioAssets].sort( function( prev, next ) {
+                return ( next.percent_change_24h > prev.percent_change_24h ) 
+                    ? 1 : ( next.percent_change_24h === prev.percent_change_24h ) ? 0 : -1
+            })
+
+            // get the total accmulated balance and total_percent_change of all the assets 
+            // in the authenticated-user's portfolio
+            let totalPortfolioBalance = 0
+            let totalChange = 0
+
+            populatedPortfolioAssets.forEach( function( asset ) {
+                totalPortfolioBalance += asset.balance
+                totalChange += asset.balance_change_24h
+            })
+
+            // since the fetched portfolio data has succesfully been extracted and 
+            // transformed, send response containing all required information from endpoint
+            res.json({
+                status: "success",
+                data: {
+                    summary: {
+                        balance: totalPortfolioBalance.toFixed(2),
+                        total_percent_change: ((totalChange / totalPortfolioBalance) * 100).toFixed(2),
+                        top_gainers: sortedPortfolioAssets.slice( 0, 3 ).map( function( { sparkline, ...asset } ) {
+                            return asset
+                        }),
+                        top_losers: sortedPortfolioAssets.slice( -3 ).map( function( { sparkline, ...asset } ) {
+                            return asset
+                        })
+                    },
+                    total_assets: populatedPortfolioAssets.length,
+                    assets: populatedPortfolioAssets.slice( 0, limit )
+                }
+            })
+
+
+        } catch ( error ) {
+            return reportFetchOperationFaliureError( next, error.message )
+        }
+    }
+)
 
 
 // POST /app/portfolio/ - add an asset to the authenticated user's portfolio using the 

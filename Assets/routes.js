@@ -260,10 +260,7 @@ router.get("/:symbol/chart",
             status,
             data: {
                 prices: data.prices.map( function( pricePoint ) {
-                    return {
-                        timestamp: pricePoint[0],
-                        price: pricePoint[1]
-                    }
+                    return pricePoint[1]
                 })
             }
         })
