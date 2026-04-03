@@ -90,6 +90,8 @@ UserSchema.statics.signUp = async function( signUpData ) {
 }
 
 
+// Portfolio management methods to add, update, and remove assets 
+// from the user's portfolio.
 UserSchema.methods.addAssetToPortfolio = async function( asset ) {
     // check if the asset already exists in the user's portfolio by matching 
     // the symbol field
@@ -143,5 +145,19 @@ UserSchema.methods.removeAssetFromPortfolio = async function( symbol ) {
         return !( item.symbol === symbol )
     })
 }
+
+
+// Watchlist management methods to add and remove assets from the user's watchlist
+UserSchema.methods.addAssetToWatchlist = async function( symbol ) {
+    // check if the asset symbol already exists in the user's watchlist
+    if ( !this.watchlist.includes( symbol ) ) {
+        // if the asset symbol doesn't exist, add it to the watchlist
+        this.watchlist.push( symbol )
+    }
+
+    return this.save()
+}
+
+
 
 export default mongoose.model( "Users", UserSchema )

@@ -27,6 +27,7 @@ export const ERROR_CODES = {
     PORTFOLIO_OPERATION_FAILURE: "PORTFOLIO_OPERATION_FAILURE",
     ASSET_NOT_FOUND: "ASSET_NOT_FOUND",
     INVALID_PORTFOLIO_QUERY: "INVALID_PORTFOLIO_QUERY",
+    WATCHLIST_OPERATION_FAILURE: "WATCHLIST_OPERATION_FAILURE",
 
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
@@ -271,4 +272,17 @@ InvalidPortfolioQueryError.code = ERROR_CODES.INVALID_PORTFOLIO_QUERY
 
 export function reportInvalidPortfolioQueryError( next ) {
     return next( InvalidPortfolioQueryError )
+}
+
+
+// watchlist operation failure error for when a user tries to perform 
+// an operation on their watchlist but the operation fails for some reason 
+// (e.g. database error)
+export const WatchlistOperationFailureError = new Error("There was an error performing the requested operation on your watchlist. Please try again later.")
+WatchlistOperationFailureError.status = 500
+WatchlistOperationFailureError.code = ERROR_CODES.WATCHLIST_OPERATION_FAILURE
+
+export function reportWatchlistOperationFailureError( next, message ) {
+    WatchlistOperationFailureError.message = `${WatchlistOperationFailureError.message}. ${ message || "" }`
+    return next( WatchlistOperationFailureError )
 }
