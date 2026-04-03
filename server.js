@@ -8,6 +8,7 @@ import authRoutes from './Auth/routes.js'
 import assetRoutes from "./Assets/routes.js"
 import portfolioRoutes from "./Portfolio/routes.js"
 import watchlistRoutes from "./Watchlist/routes.js"
+import alertRoutes from "./Alerts/routes.js"
 import passport from 'passport'
 import { configurePassport } from './Shared/middleware/passport.js'
 import cors from 'cors'
@@ -56,6 +57,9 @@ server.use("/app/portfolio", portfolioRoutes )
 
 // add watchlist routes with /app/watchlist prefix
 server.use("/app/watchlist", watchlistRoutes )
+
+// add alert routes with /app/alerts prefix
+server.use("/app/alerts", alertRoutes )
 
 
 // not found middleware to catch all unmatched routes and return 404
