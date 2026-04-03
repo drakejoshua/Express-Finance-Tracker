@@ -83,7 +83,7 @@ router.get("/",
                     throw new Error( coinBatch.error.message )
                 }
 
-                batchCoinsDetails.push( ...coinBatch.data.map( ( coinDetails ) => coinDetails ) )
+                batchCoinsDetails.push( ...coinBatch.data )
             })
 
 
