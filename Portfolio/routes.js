@@ -4,7 +4,7 @@ import { query, header, body, validationResult, param } from 'express-validator'
 import passport from 'passport'
 import { ERROR_CODES, reportAssetNotFoundError, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAssetUnitsError, reportInvalidAuthorizationTokenError, reportInvalidChartDataRangeError, reportInvalidPortfolioQueryError, reportInvalidSearchQueryError, reportPortfolioOperationFailureError } from '../Shared/utils/errors.js'
 import { validateBearerJWT } from '../Shared/utils/validators.js'
-import { getBatchCoinsDetails, getCoinDetails, getCoinMarketChart, searchCoinsByQuery } from '../Shared/utils/coingecko.js'
+import { getBatchCoinsDetails } from '../Shared/utils/coingecko.js'
 import { roundToTwoDecimalPlaces, sliceAndJoinArrayIntoChunksUsingLimit } from '../Shared/utils/helpers.js'
 
 
