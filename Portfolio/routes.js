@@ -5,7 +5,7 @@ import passport from 'passport'
 import { ERROR_CODES, reportAssetNotFoundError, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAssetUnitsError, reportInvalidAuthorizationTokenError, reportInvalidChartDataRangeError, reportInvalidPortfolioQueryError, reportInvalidSearchQueryError, reportPortfolioOperationFailureError } from '../Shared/utils/errors.js'
 import { validateBearerJWT } from '../Shared/utils/validators.js'
 import { getBatchCoinsDetails, getCoinDetails, getCoinMarketChart, searchCoinsByQuery } from '../Shared/utils/coingecko.js'
-import { sliceAndJoinArrayIntoChunksUsingLimit } from '../Shared/utils/arrays.js'
+import { roundToTwoDecimalPlaces, sliceAndJoinArrayIntoChunksUsingLimit } from '../Shared/utils/helpers.js'
 
 
 // create a new router instance
@@ -87,6 +87,7 @@ router.get("/",
             })
 
 
+
             // get populated portfolio assets by mixing the data gotten from coingecko with the 
             // authenticated-user portfolio data
             let populatedPortfolioAssets = batchCoinsDetails.map( function( coinDetails ) {
@@ -96,12 +97,12 @@ router.get("/",
                     id: coinDetails.id,
                     name: coinDetails.name,
                     image: coinDetails.image,
-                    price: coinDetails.current_price.toFixed(2),
-                    sparkline: coinDetails.sparkline_in_7d.price.map( ( price ) => price.toFixed(2) ),
-                    percent_change_24h: coinDetails.price_change_percentage_24h.toFixed(2),
-                    price_change_24h: coinDetails.price_change_24h.toFixed(2),
-                    balance: coinDetails.current_price.toFixed(2) * portfolioAssetDetails.units,
-                    balance_change_24h: coinDetails.price_change_24h.toFixed(2) * portfolioAssetDetails.units
+                    price: coinDetails.current_price,
+                    sparkline: coinDetails.sparkline_in_7d.price.map( ( price ) => price ),
+                    percent_change_24h: coinDetails.price_change_percentage_24h,
+                    price_change_24h: coinDetails.price_change_24h,
+                    balance: coinDetails.current_price * portfolioAssetDetails.units,
+                    balance_change_24h: coinDetails.price_change_24h * portfolioAssetDetails.units
                 }
             })
 
@@ -128,17 +129,35 @@ router.get("/",
                 status: "success",
                 data: {
                     summary: {
-                        balance: totalPortfolioBalance.toFixed(2),
-                        total_percent_change: ((totalChange / totalPortfolioBalance) * 100).toFixed(2),
-                        top_gainers: sortedPortfolioAssets.slice( 0, 3 ).map( function( { sparkline, ...asset } ) {
-                            return asset
-                        }),
-                        top_losers: sortedPortfolioAssets.slice( -3 ).map( function( { sparkline, ...asset } ) {
-                            return asset
-                        })
+                        balance: roundToTwoDecimalPlaces( totalPortfolioBalance ),
+                        total_percent_change: roundToTwoDecimalPlaces( ( (totalChange / totalPortfolioBalance) * 100 ) ),
+                        top_gainers: sortedPortfolioAssets.slice( 0, 3 ).map(({ sparkline, ...asset }) => ({
+                            ...asset,
+                            price: roundToTwoDecimalPlaces(asset.price),
+                            percent_change_24h: roundToTwoDecimalPlaces(asset.percent_change_24h),
+                            price_change_24h: roundToTwoDecimalPlaces(asset.price_change_24h),
+                            balance: roundToTwoDecimalPlaces(asset.balance),
+                            balance_change_24h: roundToTwoDecimalPlaces(asset.balance_change_24h),
+                        })),
+                        top_losers: sortedPortfolioAssets.slice( -3 ).map(({ sparkline, ...asset }) => ({
+                            ...asset,
+                            price: roundToTwoDecimalPlaces(asset.price),
+                            percent_change_24h: roundToTwoDecimalPlaces(asset.percent_change_24h),
+                            price_change_24h: roundToTwoDecimalPlaces(asset.price_change_24h),
+                            balance: roundToTwoDecimalPlaces(asset.balance),
+                            balance_change_24h: roundToTwoDecimalPlaces(asset.balance_change_24h),
+                        }))
                     },
                     total_assets: populatedPortfolioAssets.length,
-                    assets: populatedPortfolioAssets.slice( 0, limit )
+                    assets: populatedPortfolioAssets.slice( 0, limit ).map(asset => ({
+                        ...asset,
+                        price: roundToTwoDecimalPlaces(asset.price),
+                        percent_change_24h: roundToTwoDecimalPlaces(asset.percent_change_24h),
+                        price_change_24h: roundToTwoDecimalPlaces(asset.price_change_24h),
+                        balance: roundToTwoDecimalPlaces(asset.balance),
+                        balance_change_24h: roundToTwoDecimalPlaces(asset.balance_change_24h),
+                        sparkline: asset.sparkline.map( roundToTwoDecimalPlaces )
+                    }))
                 }
             })
 
@@ -212,7 +231,7 @@ router.post("/",
             const { symbol, units } = req.body
 
             // add the asset to the user's portfolio in the database
-            await authenticatedUser.addAssetToPortfolio({ symbol, units })
+            await authenticatedUser.addAssetToPortfolio({ symbol, units: parseInt( units ) })
 
             // return a success response with the updated portfolio data
             return res.json({
@@ -371,7 +390,7 @@ router.put("/:symbol",
             }
 
             // update the asset quantity in the user's portfolio in the database
-            await authenticatedUser.updateAssetToPortfolio( symbol, units )
+            await authenticatedUser.updateAssetToPortfolio( symbol, parseInt( units ) )
 
             // return a success response with the updated portfolio data
             return res.json({

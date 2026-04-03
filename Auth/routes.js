@@ -342,8 +342,6 @@ router.post("/refresh",
             }
         }
 
-        console.log( "Received request cookies:", req.cookies.refresh_token )
-
         // check if refresh token is not expired and is valid
         const refreshToken = req.cookies.refresh_token
         const decoded = verifyJWT( refreshToken )
@@ -409,8 +407,6 @@ router.get("/google/callback",
         // if authentication is successful, generate access and refresh tokens for the user
         const accessToken = generateAccessToken( req.user._id )
         const refreshToken = generateRefreshToken( req.user._id )
-
-        console.log("User authenticated with Google:", req.user )
 
         // save the refresh token to the user's document in the database
         req.user.refresh_token = refreshToken

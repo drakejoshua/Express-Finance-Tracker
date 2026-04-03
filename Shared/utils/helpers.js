@@ -27,3 +27,7 @@ export function sliceAndJoinArrayIntoChunksUsingLimit( array, limit ) {
     return result
 }
 
+export function roundToTwoDecimalPlaces( number ) {
+    if ( number < 1 ) return parseFloat( number.toFixed(6) )
+    return parseFloat( number.toFixed(2) )
+}
