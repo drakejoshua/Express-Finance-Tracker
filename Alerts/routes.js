@@ -200,5 +200,129 @@ router.delete("/:id",
 )
 
 
+// PUT /app/alerts/:id - Update an existing price alert by its ID. 
+// Requires authentication via Bearer JWT token in the Authorization header.
+// Request body can contain any of the alert fields to be updated such as: 
+// condition, target_price, title, message, etc.
+router.put("/:id",
+    [
+        param("id")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_ALERT_ID )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ALERT_ID )
+            .bail()
+            .isMongoId()
+            .withMessage( ERROR_CODES.INVALID_ALERT_ID )
+            .bail(),
+        header("Authorization")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail(),
+        body("condition")
+            .optional()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ALERT_CONDITION )
+            .bail()
+            .isIn(["above", "below"])
+            .withMessage( ERROR_CODES.INVALID_ALERT_CONDITION )
+            .bail(),
+        body("target_price")
+            .optional()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ALERT_TARGET_PRICE )
+            .bail()
+            .isFloat({ gt: 0 })
+            .withMessage( ERROR_CODES.INVALID_ALERT_TARGET_PRICE )
+            .bail(),
+        body("title")
+            .optional()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ALERT_TITLE )
+            .bail()
+            .isLength({ max: 100 })
+            .withMessage( ERROR_CODES.INVALID_ALERT_TITLE )
+            .bail(),
+        body("message")
+            .optional()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_ALERT_MESSAGE )
+            .bail()
+            .isLength({ max: 500 })
+            .withMessage( ERROR_CODES.INVALID_ALERT_MESSAGE )
+            .bail(),
+    ],
+    function( req, res, next ) {
+        // get validation errors from the request
+        const errors = validationResult( req )
+
+        // check if there are any validation errors and report them
+        if ( !errors.isEmpty() ) {
+            switch( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+                case ERROR_CODES.INVALID_ALERT_ID:
+                    return reportInvalidAlertIdError( next )
+                case ERROR_CODES.INVALID_ALERT_CONDITION:
+                    return reportInvalidAlertConditionError( next )
+                case ERROR_CODES.INVALID_ALERT_TARGET_PRICE:
+                    return reportInvalidAlertTargetPriceError( next )
+                case ERROR_CODES.INVALID_ALERT_TITLE:
+                    return reportInvalidAlertTitleError( next )
+                case ERROR_CODES.INVALID_ALERT_MESSAGE:
+                    return reportInvalidAlertMessageError( next )
+            }
+        }
+
+        // proceed to the other route handlers if there are no validation errors
+        next()
+    },
+    passport.authenticate("jwt", { session: false } ),
+    async function( req, res, next ) {
+        // get the authenticated user, alert ID and update data from the request
+        const user = req.user
+        const { id } = req.params
+        const updateData = req.body
+
+        try {
+            // find the alert by ID and user ID to ensure the user can only 
+            // update their own alerts
+            const alert = await Alert.findOne({ _id: id, user_id: user._id })
+
+            // if no alert is found from the search operation,
+            // return an AlertNotFound Error
+            if ( !alert ) {
+                return reportAlertNotFoundError( next )
+            }
+
+            // update the alert with the new data
+            await alert.updateAlert( updateData )
+
+            // send the updated alert as the response
+            res.json({
+                status: "success",
+                data: {
+                    id: alert._id,
+                    asset_symbol: alert.asset_symbol,
+                    condition: alert.condition,
+                    target_price: alert.target_price,
+                    title: alert.title,
+                    message: alert.message,
+                }
+            })
+        } catch ( error ) {
+            reportAlertOperationFailureError( next, error.message )
+        }
+    }
+)
+
+
 // export router for use in server.js
 export default router

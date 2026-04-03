@@ -63,6 +63,16 @@ alertSchema.statics.removeAlert = async function( alertId, userId ) {
     })
 }
 
+alertSchema.methods.updateAlert = async function( updateData ) {
+    this.condition = updateData?.condition || this.condition
+    this.target_price = updateData?.target_price || this.target_price
+    this.asset_symbol = updateData?.asset_symbol || this.asset_symbol
+    this.title = updateData?.title || this.title
+    this.message = updateData?.message || this.message
+
+    return this.save()
+}
+
 
 // export the Alert model for use in other parts of the application
 export default mongoose.model("Alerts", alertSchema)
