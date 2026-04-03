@@ -158,6 +158,15 @@ UserSchema.methods.addAssetToWatchlist = async function( symbol ) {
     return this.save()
 }
 
+UserSchema.methods.removeAssetFromWatchlist = async function( symbol ) {
+    // filter the watchlist to remove the asset symbol that matches the provided symbol
+    this.watchlist = this.watchlist.filter( function ( item ) {
+        return item !== symbol
+    })
+
+    return this.save()
+}
+
 
 
 export default mongoose.model( "Users", UserSchema )
