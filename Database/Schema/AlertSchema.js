@@ -1,5 +1,9 @@
+// import mongoose to define the Alert schema and model
 import mongoose from "mongoose";
 
+// define the Alert schema with fields for user reference, 
+// condition, target price, asset symbol, active status, title, 
+// and message
 const alertSchema = new mongoose.Schema({
     user_id: {
         type: mongoose.SchemaTypes.ObjectId,
@@ -33,20 +37,25 @@ const alertSchema = new mongoose.Schema({
         type: String,
         required: true,
         maxLength: 500
-    },
-    alert_email: {
-        type: String,
-        required: true,
-        lowercase: true,
-        validate: {
-            validator: function( value ) {
-                // Simple email regex for validation
-                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-            },
-            message: props => `${ props.value } is not a valid email address`
-        }
     }
 })
 
 
+// Alert management methods to be added to the Alert schema for creating,
+// updating, deleting and deactivating alerts
+alertSchema.statics.createAlert = async function( alertData ) {
+    const alert = new this({
+        user_id: alertData.user_id,
+        condition: alertData.condition,
+        target_price: alertData.target_price,
+        asset_symbol: alertData.asset_symbol,
+        title: alertData.title,
+        message: alertData.message
+    })
+
+    return alert.save()
+}
+
+
+// export the Alert model for use in other parts of the application
 export default mongoose.model("Alerts", alertSchema)

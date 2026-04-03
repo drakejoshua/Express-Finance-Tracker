@@ -29,6 +29,13 @@ export const ERROR_CODES = {
     INVALID_PORTFOLIO_QUERY: "INVALID_PORTFOLIO_QUERY",
     WATCHLIST_OPERATION_FAILURE: "WATCHLIST_OPERATION_FAILURE",
 
+    // alert-related errors
+    INVALID_ALERT_CONDITION: "INVALID_ALERT_CONDITION",
+    INVALID_ALERT_TARGET_PRICE: "INVALID_ALERT_TARGET_PRICE",
+    INVALID_ALERT_TITLE: "INVALID_ALERT_TITLE",
+    INVALID_ALERT_MESSAGE: "INVALID_ALERT_MESSAGE",
+    ALERT_OPERATION_FAILURE: "ALERT_OPERATION_FAILURE",
+
 
     EMAIL_SEND_FAILURE: "EMAIL_SEND_FAILURE"
 }
@@ -285,4 +292,64 @@ WatchlistOperationFailureError.code = ERROR_CODES.WATCHLIST_OPERATION_FAILURE
 export function reportWatchlistOperationFailureError( next, message ) {
     WatchlistOperationFailureError.message = `${WatchlistOperationFailureError.message}. ${ message || "" }`
     return next( WatchlistOperationFailureError )
+}
+
+
+// invalid alert condition error for when a user tries to create or update 
+// an alert with an invalid condition value
+export const InvalidAlertConditionError = new Error("The alert condition value is invalid. Valid condition values are: above, below.")
+InvalidAlertConditionError.status = 400
+InvalidAlertConditionError.code = ERROR_CODES.INVALID_ALERT_CONDITION
+
+export function reportInvalidAlertConditionError( next ) {
+    return next( InvalidAlertConditionError )
+}
+
+
+// invalid alert target price error for when a user tries to create or update
+// an alert with an invalid target price value ( e.g. negative price or 
+// non-numeric price )
+export const InvalidAlertTargetPriceError = new Error("The alert target price value is invalid. Target price must be a number greater than zero.")
+InvalidAlertTargetPriceError.status = 400
+InvalidAlertTargetPriceError.code = ERROR_CODES.INVALID_ALERT_TARGET_PRICE
+
+export function reportInvalidAlertTargetPriceError( next ) {
+    return next( InvalidAlertTargetPriceError )
+}
+
+
+// invalid alert title error for when a user tries to create or update an 
+// alert with an invalid title value ( e.g. empty title or title that exceeds 
+// max length )
+export const InvalidAlertTitleError = new Error("The alert title is invalid. Title must be between 1 and 100 characters long.")
+InvalidAlertTitleError.status = 400
+InvalidAlertTitleError.code = ERROR_CODES.INVALID_ALERT_TITLE
+
+export function reportInvalidAlertTitleError( next ) {
+    return next( InvalidAlertTitleError )
+}
+
+
+// invalid alert description error for when a user tries to create or update an
+// alert with an invalid description value ( e.g. empty description or description 
+// that exceeds max length )
+export const InvalidAlertMessageError = new Error("The alert message is invalid. Message must be between 1 and 500 characters long.")
+InvalidAlertMessageError.status = 400
+InvalidAlertMessageError.code = ERROR_CODES.INVALID_ALERT_MESSAGE
+
+export function reportInvalidAlertMessageError( next ) {
+    return next( InvalidAlertMessageError )
+}
+
+
+// alert operation failure error for when a user tries to perform an 
+// operation on their alerts but the operation fails for some reason 
+// (e.g. database error)
+export const AlertOperationFailureError = new Error("There was an error performing the requested operation on your alert. Please try again later.")
+AlertOperationFailureError.status = 500
+AlertOperationFailureError.code = ERROR_CODES.ALERT_OPERATION_FAILURE
+
+export function reportAlertOperationFailureError( next, message ) {
+    AlertOperationFailureError.message = `${AlertOperationFailureError.message}. ${ message || "" }`
+    return next( AlertOperationFailureError )
 }
