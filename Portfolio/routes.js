@@ -90,8 +90,9 @@ router.get("/",
 
             // get populated portfolio assets by mixing the data gotten from coingecko with the 
             // authenticated-user portfolio data
+            const portfolioMap = new Map( authenticatedUser.portfolio.map( asset => [ asset.symbol, asset ] ) )
             let populatedPortfolioAssets = batchCoinsDetails.map( function( coinDetails ) {
-                const portfolioAssetDetails = authenticatedUser.portfolio.find( ( asset ) => coinDetails.id === asset.symbol )
+                const portfolioAssetDetails = portfolioMap.get( coinDetails.id )
 
                 return {
                     id: coinDetails.id,

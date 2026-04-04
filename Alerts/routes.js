@@ -1,13 +1,134 @@
 // import necessary modules and utilities
 import express from "express"
-import { body, header, param, validationResult } from "express-validator"
+import { body, header, param, query, validationResult } from "express-validator"
 import passport from "passport"
-import { ERROR_CODES, reportAlertNotFoundError, reportAlertOperationFailureError, reportInvalidAlertConditionError, reportInvalidAlertIdError, reportInvalidAlertMessageError, reportInvalidAlertTargetPriceError, reportInvalidAlertTitleError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError } from "../Shared/utils/errors.js"
+import { ERROR_CODES, reportAlertNotFoundError, reportAlertOperationFailureError, reportInvalidAlertConditionError, reportInvalidAlertIdError, reportInvalidAlertMessageError, reportInvalidAlertTargetPriceError, reportInvalidAlertTitleError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidPortfolioQueryError } from "../Shared/utils/errors.js"
 import { validateBearerJWT } from "../Shared/utils/validators.js"
 import Alert from "../Database/Schema/AlertSchema.js"
+import { getBatchCoinsDetails } from "../Shared/utils/coingecko.js"
+import { sliceAndJoinArrayIntoChunksUsingLimit, roundToTwoDecimalPlaces } from "../Shared/utils/helpers.js"
 
 // Initialize router
 const router = express.Router()
+
+
+// GET /app/alerts?limit={ int } - get the authenticated user's watchlist with current price, 
+// sparkline data, details for each asset and watchlist summary. Requires a valid JWT token 
+// in the Authorization header.
+router.get("/", 
+    [
+        header("Authorization")
+            .exists()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail()
+            .custom( validateBearerJWT )
+            .withMessage( ERROR_CODES.INVALID_AUTHORIZATION_TOKEN )
+            .bail(),
+        query("limit")
+            .optional()
+            .isInt({ gt: 0 })
+            .withMessage( ERROR_CODES.INVALID_PORTFOLIO_QUERY )
+            .bail()
+    ],
+    function( req, res, next ) {
+        // extract validation errors from the request if any
+        const errors = validationResult( req )
+
+        // check if there are validation errors and return the first error message if any
+        if ( !errors.isEmpty() ) {
+            switch ( errors.array()[0].msg ) {
+                case ERROR_CODES.INVALID_PORTFOLIO_QUERY:
+                    return reportInvalidPortfolioQueryError( next )
+                case ERROR_CODES.INVALID_AUTHORIZATION_TOKEN:
+                    return reportInvalidAuthorizationTokenError( next )
+            }
+        }
+
+        // proceed with the request handling if there are no validation errors
+        next()
+    },
+    passport.authenticate("jwt", { session: false }),
+    async function( req, res, next ) {
+        try {
+            // get the authenticated user from the request object 
+            // (populated by passport after successful authentication)
+            const authenticatedUser = req.user
+
+            // extract the optional limit query param from the request
+            const limit = parseInt(req.query.limit) || 10
+
+            // fetch all the active alerts that belong to the authenticated user from the database
+            const alerts = await Alert.find({ user_id: authenticatedUser._id, is_active: true })
+                                    .limit(limit)
+            const totalAlerts = await Alert.countDocuments({ user_id: authenticatedUser._id, is_active: true })
+
+            // extract the asset symbols from the fetched alerts to get the unique list of 
+            // assets in the user's alerts for fetching their details from the coingecko API
+            const alertAssetSymbols = new Set( alerts.map( alert => alert.asset_symbol ) )
+            const uniqueAlertAssetSymbols = [ ...alertAssetSymbols ]
+
+
+            // split the authenticated-user watchlist array into a compiled array which 
+            // contains strings as a comma-seperated list of 49 symbols each. This is done 
+            // to allow batch fetching of coin details from the coingecko API
+            let results = sliceAndJoinArrayIntoChunksUsingLimit( uniqueAlertAssetSymbols, 49 )
+
+            // fetch details of the resulting symbol lists from coingecko at once
+            let batchCoinsDetailsResp = await Promise.all( results.map( function( symbols_ids ) {
+                return getBatchCoinsDetails( symbols_ids )
+            }))
+
+            // combine all the batch-fetched coin details into a flat array instead of the 
+            // normal response format gotten from the coingecko helper function
+            let batchCoinsDetails = []
+
+            batchCoinsDetailsResp.forEach( function( coinBatch ) {
+                if ( coinBatch.status === "error" ) {
+                    throw new Error( coinBatch.error.message )
+                }
+
+                batchCoinsDetails.push( ...coinBatch.data )
+            })
+
+            // populate the alert assets with the fetched coin details from coingecko 
+            const symbolsMap =  new Map( batchCoinsDetails.map( coin => [ coin.id, coin ] ) )
+
+            let populatedAlertData = alerts.map( function( alert ) {
+                let coinDetail = symbolsMap.get( alert.asset_symbol )
+
+                return {
+                    id: coinDetail.id,
+                    name: coinDetail.name,
+                    image: coinDetail.image,
+                    price: roundToTwoDecimalPlaces( coinDetail.current_price ),
+                    percent_change_24h: roundToTwoDecimalPlaces( coinDetail.price_change_percentage_24h ),
+                    price_change_24h: roundToTwoDecimalPlaces( coinDetail.price_change_24h ),
+                    target_price: alert.target_price,
+                    condition: alert.condition,
+                    title: alert.title,
+                    message: alert.message
+                }
+            })
+
+            // since the fetched alert data has succesfully been extracted and 
+            // transformed, send response containing all required information from endpoint
+            res.json({
+                status: "success",
+                data: {
+                    total_alerts: totalAlerts,
+                    alerts: populatedAlertData.slice( 0, limit )
+                }
+            })
+
+
+        } catch ( error ) {
+            return reportAlertOperationFailureError( next, error.message )
+        }
+    }
+)
 
 
 // POST /app/alerts - Create a new price alert for a specific asset. 
