@@ -132,7 +132,7 @@ router.get("/",
                     summary: {
                         balance: roundToTwoDecimalPlaces( totalPortfolioBalance ),
                         total_percent_change: roundToTwoDecimalPlaces( ( (totalChange / totalPortfolioBalance) * 100 ) ),
-                        top_gainers: sortedPortfolioAssets.slice( 0, 3 ).map(({ sparkline, ...asset }) => ({
+                        top_gainers: sortedPortfolioAssets.slice( 0, 3 ).map(({ ...asset }) => ({
                             ...asset,
                             price: roundToTwoDecimalPlaces(asset.price),
                             percent_change_24h: roundToTwoDecimalPlaces(asset.percent_change_24h),
@@ -140,7 +140,7 @@ router.get("/",
                             balance: roundToTwoDecimalPlaces(asset.balance),
                             balance_change_24h: roundToTwoDecimalPlaces(asset.balance_change_24h),
                         })),
-                        top_losers: sortedPortfolioAssets.slice( -3 ).map(({ sparkline, ...asset }) => ({
+                        top_losers: sortedPortfolioAssets.slice( -3 ).map(({ ...asset }) => ({
                             ...asset,
                             price: roundToTwoDecimalPlaces(asset.price),
                             percent_change_24h: roundToTwoDecimalPlaces(asset.percent_change_24h),

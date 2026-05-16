@@ -71,7 +71,9 @@ router.get("/",
             // split the authenticated-user watchlist array into a compiled array which contains strings as 
             // a comma-seperated list of 49 symbols each. This is done to allow batch fetching of coin
             // details from the coingecko API
-            let results = sliceAndJoinArrayIntoChunksUsingLimit( authenticatedUser.watchlist, 49 )
+            let results = sliceAndJoinArrayIntoChunksUsingLimit( 
+                authenticatedUser.watchlist, 49 
+            )
 
             // fetch details of the resulting symbol lists from coingecko at once
             let batchCoinsDetailsResp = await Promise.all( results.map( function( symbols_ids ) {
@@ -90,13 +92,6 @@ router.get("/",
                 batchCoinsDetails.push( ...coinBatch.data )
             })
 
-            // sort the populated watchlist assets in descending order in order to
-            // get the top losers and top gainers in the users watchlist
-            let sortedWatchlistAssets = [...batchCoinsDetails].sort( function( prev, next ) {
-                return ( next.price_change_percentage_24h > prev.price_change_percentage_24h ) 
-                    ? 1 : ( next.price_change_percentage_24h === prev.price_change_percentage_24h ) ? 0 : -1
-            })
-
             // since the fetched portfolio data has succesfully been extracted and 
             // transformed, send response containing all required information from endpoint
             res.json({
@@ -109,26 +104,6 @@ router.get("/",
                     // sparkline: coinDetails.sparkline_in_7d.price.map( ( price ) => price ),
                     // percent_change_24h: coinDetails.price_change_percentage_24h,
                     // price_change_24h: coinDetails.price_change_24h,
-                    // balance: coinDetails.current_price * portfolioAssetDetails.units,
-                    // balance_change_24h: coinDetails.price_change_24h * portfolioAssetDetails.units
-                    summary: {
-                        top_gainers: sortedWatchlistAssets.slice( 0, 3 ).map(({ sparkline_in_7d, ...asset }) => ({
-                            id: asset.id,
-                            name: asset.name,
-                            image: asset.image,
-                            price: roundToTwoDecimalPlaces(asset.current_price),
-                            percent_change_24h: roundToTwoDecimalPlaces(asset.price_change_percentage_24h),
-                            price_change_24h: roundToTwoDecimalPlaces(asset.price_change_24h),
-                        })),
-                        top_losers: sortedWatchlistAssets.slice( -3 ).map(({ sparkline_in_7d, ...asset }) => ({
-                            id: asset.id,
-                            name: asset.name,
-                            image: asset.image,
-                            price: roundToTwoDecimalPlaces(asset.current_price),
-                            percent_change_24h: roundToTwoDecimalPlaces(asset.price_change_percentage_24h),
-                            price_change_24h: roundToTwoDecimalPlaces(asset.price_change_24h),
-                        }))
-                    },
                     total_assets: batchCoinsDetails.length,
                     assets: batchCoinsDetails.slice( 0, limit ).map(asset => ({
                         id: asset.id,

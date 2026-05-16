@@ -1,14 +1,15 @@
 import express from "express"
-import { body, header, cookie, validationResult } from "express-validator"
+import { body, header, cookie, validationResult, query } from "express-validator"
 import upload from "./middleware/multer.js"
-import { ERROR_CODES, reportEmailExistsError, reportFileUploadError, reportInvalidAuthorizationTokenError, reportInvalidEmailError, reportInvalidRefreshTokenError, reportInvalidUsernameError, reportProfileUpdateFailureError } from "../Shared/utils/errors.js"
-import { cloudinaryUpload } from "./utils/cloudinary.js"
+import { ERROR_CODES, reportEmailExistsError, reportFileUploadError, reportInvalidAuthorizationTokenError, reportInvalidEmailError, reportInvalidPasswordFormatError, reportInvalidRefreshTokenError, reportInvalidUsernameError, reportProfileUpdateFailureError } from "../Shared/utils/errors.js"
+import { cloudinaryDelete, cloudinaryUpload } from "./utils/cloudinary.js"
 import Users from "../Database/Schema/UserSchema.js"
 import bcrypt from "bcrypt"
 import { generateAccessToken, generateRefreshToken, verifyJWT } from "./utils/tokens.js"
 import passport from "passport"
 import { validateBearerJWT } from "../Shared/utils/validators.js"
 import cookieParser from "cookie-parser"
+import { supportedCurrencies } from "../Shared/utils/supportedCurrencies.js"
 
 // create a router for auth routes
 const router = express.Router()
@@ -404,6 +405,9 @@ router.get("/google",
 router.get("/google/callback",
     passport.authenticate( "google", { session: false }),
     async function( req, res, next ) {
+        // get the frontend url from .env
+        const frontendURL = process.env.FRONTEND_URL
+
         // if authentication is successful, generate access and refresh tokens for the user
         const accessToken = generateAccessToken( req.user._id )
         const refreshToken = generateRefreshToken( req.user._id )
@@ -416,16 +420,7 @@ router.get("/google/callback",
         res.cookie( "refresh_token", refreshToken, refreshTokenCookieOptions )
 
         // send success response to the client with the user's profile data and access token
-        return res.status( 200 ).json({
-            status: "success",
-            data: {
-                user: {
-                    ...req.user.getProfileData(),
-                    access_token: accessToken,
-                    expires_in: 15 * 60     // access token expires in 15 mins
-                }
-            }
-        })
+        return res.redirect(`${ frontendURL }/auth/google?hash=${ accessToken }`)
     }
 )
 
@@ -461,7 +456,21 @@ router.post("/update",
             .optional()
             .isLength({ min: 6 })
             .withMessage( ERROR_CODES.INVALID_PASSWORD_FORMAT )
+            .bail(),
+        body("preferred_currency")
+            .optional()
+            .isIn( supportedCurrencies )
+            .withMessage( ERROR_CODES.INVALID_CURRENCY )
+            .bail(),
+        query("delete_photo")
+            .exists()
+            .withMessage( ERROR_CODES.FILE_UPLOAD_ERROR )
             .bail()
+            .notEmpty()
+            .withMessage( ERROR_CODES.FILE_UPLOAD_ERROR )
+            .bail()
+            .isBoolean()
+            .withMessage( ERROR_CODES.FILE_UPLOAD_ERROR )
     ],
     async function( req, res, next ) {
         // extract validation errors from the request
@@ -479,6 +488,10 @@ router.post("/update",
                     return reportInvalidEmailError( next )
                 case ERROR_CODES.INVALID_PASSWORD_FORMAT:
                     return reportInvalidPasswordFormatError( next )
+                case ERROR_CODES.INVALID_CURRENCY:
+                    return reportInvalidCurrencyError( next )
+                case ERROR_CODES.FILE_UPLOAD_ERROR:
+                    return reportFileUploadError( next )
             }
         }
 
@@ -490,7 +503,29 @@ router.post("/update",
     passport.authenticate("jwt", { session: false }),
 
     async function( req, res, next ) {
-        // if a file was uploaded, upload the file to cloudinary and update the user's profile photo URL and public ID in the database
+        const deletePhoto = req.query.delete_photo === "true"
+
+        // if delete_photo query parameter is true, delete the user's 
+        // existing profile photo from cloudinary and remove the profile 
+        // photo URL and public ID from the database
+        if ( deletePhoto ) {
+            if ( req.user.provider === "google" ) {
+                req.user.profile_photo = ""
+            }
+
+            if ( req.user.profile_photo_public_id ) {
+                try {
+                    await cloudinaryDelete( req.user.profile_photo_public_id )
+                    req.user.profile_photo = ""
+                    req.user.profile_photo_public_id = ""
+                } catch ( error ) {
+                    return reportFileUploadError( next )
+                }
+            }
+        }
+
+        // if a file was uploaded, upload the file to cloudinary and 
+        // update the user's profile photo URL and public ID in the database
         if ( req.file ) {
             try {
                 const uploadResult = await cloudinaryUpload( req.file.buffer )
@@ -527,6 +562,13 @@ router.post("/update",
         // new password and update it in the database
         if ( req.body.password && req.user.provider !== "google" ) {
             req.user.password = await bcrypt.hash( req.body.password, bcryptRounds )
+        }
+
+        // if a preferred currency was provided in the request 
+        // body, update the user's preferred currency in the 
+        // database
+        if ( req.body.preferred_currency ) {
+            req.user.currency = req.body.preferred_currency
         }
 
         // create a new access token for the user after updating their profile

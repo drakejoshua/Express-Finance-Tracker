@@ -92,7 +92,7 @@ export function configurePassport( passport ) {
             try {
                 // find user by Google ID from the profile information
                 let user = await Users.findOne( { email: profile.emails[0].value } )
-
+                
                 // if user not found, create a new user with the information from the Google profile
                 if ( !user ) {
                     const newUser = await Users.signUp({
@@ -104,11 +104,6 @@ export function configurePassport( passport ) {
 
                     // return the newly created user object back to passport
                     return done( null, newUser )
-                }
-
-                // if user is found, check if the user uses Google authentication method
-                if ( user.provider != "google" ) {
-                    return done( InvalidGoogleAuthenticationMethodError, false )
                 }
 
                 // if all checks pass, return the user object

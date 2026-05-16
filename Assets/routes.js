@@ -2,9 +2,10 @@
 import express from 'express'
 import { query, header, validationResult, param } from 'express-validator'
 import passport from 'passport'
-import { ERROR_CODES, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidChartDataRangeError, reportInvalidSearchQueryError } from '../Shared/utils/errors.js'
+import { ERROR_CODES, reportFetchOperationFaliureError, reportInvalidAssetSymbolError, reportInvalidAuthorizationTokenError, reportInvalidChartDataRangeError, reportInvalidPortfolioQueryError, reportInvalidSearchQueryError } from '../Shared/utils/errors.js'
 import { validateBearerJWT } from '../Shared/utils/validators.js'
 import { getCoinDetails, getCoinMarketChart, searchCoinsByQuery } from '../Shared/utils/coingecko.js'
+import Alert from '../Database/Schema/AlertSchema.js'
 
 
 // create a router instance for defining the /assets/* routes
@@ -117,6 +118,8 @@ router.get("/:symbol",
                     return reportInvalidAuthorizationTokenError( next )
                 case ERROR_CODES.INVALID_ASSET_SYMBOL:
                     return reportInvalidAssetSymbolError( next )
+                case ERROR_CODES.INVALID_PORTFOLIO_QUERY:
+                    return reportInvalidPortfolioQueryError( next )
             }
         }
 
@@ -144,6 +147,14 @@ router.get("/:symbol",
         const isInWatchlist = authenticatedUser.watchlist.some( watchlistSymbol => watchlistSymbol === symbol )
         const portfolioAsset = authenticatedUser.portfolio.find( portfolioAsset => portfolioAsset.symbol === symbol )
 
+        // check if there are any alerts for the asset from the 
+        // authenticated user and include that information in the response
+        const userAlerts = await Alert.find({ 
+            user_id: authenticatedUser._id, 
+            asset_symbol: symbol,
+            is_active: true
+        })
+
         // construct response object by adding user portfolio and watchlist data 
         // to the coin details response
         const responseData = {
@@ -156,7 +167,8 @@ router.get("/:symbol",
             percent_change_24h: data.market_data.price_change_percentage_24h,
             price_change_24h: data.market_data.price_change_24h,
             is_watchlist: false,
-            is_portfolio: false
+            is_portfolio: false,
+            has_alerts: false
         }
 
         // if the symbol is in the user's watchlist, add an "is_watchlist" field 
@@ -172,9 +184,26 @@ router.get("/:symbol",
             responseData.is_portfolio = true
             responseData.portfolio = {
                 units: portfolioAsset.units,
-                amount: data.data.market_data.current_price.usd * portfolioAsset.units,
-                price_change: data.market_data.price_change_24h * portfolioAsset.units,
+                amount: data.market_data.current_price.usd * portfolioAsset.units,
+                balance_change: data.market_data.price_change_24h * portfolioAsset.units,
             }
+        }
+
+        // if there are any alerts for the asset from the authenticated 
+        // user, add an "alerts" field to the response data with an array 
+        // of the user's alerts for the asset
+        if ( userAlerts.length > 0 ) {
+            responseData.has_alerts = true
+            responseData.alerts = userAlerts.map( alert => {
+                return {
+                    id: alert._id,
+                    condition: alert.condition,
+                    target_price: alert.target_price,
+                    is_active: alert.is_active,
+                    title: alert.title,
+                    message: alert.message
+                }
+            })
         }
 
         // if the fetch was successful, return a json response with the 

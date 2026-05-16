@@ -65,7 +65,8 @@ UserSchema.methods.getProfileData = function() {
         name: this.name,
         email: this.email,
         profile_photo: this.profile_photo,
-        preferred_currency: this.currency
+        preferred_currency: this.currency,
+        provider: this.provider
     }
 }
 

@@ -12,4 +12,4 @@
     - INR: Indian Rupee
 */
 
-export const supportedCurrencies = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NGN", "INR"]
+export const supportedCurrencies = ["USD", "EUR", "GBP", "JPY", "GHS", "CHF", "NGN", "INR"]

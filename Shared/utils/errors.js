@@ -17,6 +17,7 @@ export const ERROR_CODES = {
     INVALID_AUTHORIZATION_TOKEN: "INVALID_AUTHORIZATION_TOKEN",
     INVALID_REFRESH_TOKEN: "INVALID_REFRESH_TOKEN",
     PROFILE_UPDATE_FAILURE: "PROFILE_UPDATE_FAILURE",
+    INVALID_CURRENCY: "INVALID_CURRENCY",
 
     // asset-related errors
     INVALID_SEARCH_QUERY: "INVALID_SEARCH_QUERY",
@@ -114,7 +115,7 @@ export function reportEmailExistsError( next ) {
 
 
 // file upload error for when file upload to cloudinary fails
-export const FileUploadError = new Error("There was an error uploading the file. Please try again later.")
+export const FileUploadError = new Error("There was an error uploading/updating the file. Please try again later.")
 FileUploadError.status = 500
 FileUploadError.code = ERROR_CODES.FILE_UPLOAD_ERROR
 
@@ -214,7 +215,7 @@ FetchOperationFaliureError.status = 404
 FetchOperationFaliureError.code = ERROR_CODES.FETCH_OPERATION_FALIURE
 
 export function reportFetchOperationFaliureError( next, message ) {
-    FetchOperationFaliureError.message = `${FetchOperationFaliureError.message}. ${ message || "" }`
+    FetchOperationFaliureError.message = `${ message || FetchOperationFaliureError.message}`
     return next( FetchOperationFaliureError )
 }
 
@@ -376,4 +377,15 @@ AlertNotFoundError.code = ERROR_CODES.ALERT_NOT_FOUND
 
 export function reportAlertNotFoundError( next ) {
     return next( AlertNotFoundError )
+}
+
+
+// invalid currency error for when a user tries to update 
+// their preferred currency with an unsupported currency code
+export const InvalidCurrencyError = new Error("The specified currency is not supported. Please choose a valid currency.")
+InvalidCurrencyError.status = 400
+InvalidCurrencyError.code = ERROR_CODES.INVALID_CURRENCY
+
+export function reportInvalidCurrencyError( next ) {
+    return next( InvalidCurrencyError )
 }

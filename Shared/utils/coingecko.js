@@ -88,7 +88,7 @@ export async function getBatchCoinsDetails( comma_seperated_symbols_list ) {
             data
         }
     } catch( error ) {
-        console.log("coingecko fetch error: ", error.message)
+        console.log("coingecko fetchx error: ", error.message)
         return {
             status: "error",
             error
